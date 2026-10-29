@@ -85,7 +85,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   display:grid;gap:12px;background:rgba(14,18,46,.95);border:1px solid var(--line);border-radius:18px;padding:14px 16px 4px}
 #card .head{display:flex;justify-content:space-between;align-items:center;min-height:28px;gap:8px}
 #card .head .n{font:14px var(--px);color:var(--dim)}
-#card .head .voice{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--cyan)}
+#card .head .voice{display:flex;align-items:center;gap:6px;min-height:44px;margin:-8px -6px -8px 0;padding:0 10px;border:1px solid var(--line);border-radius:22px;background:none;font-size:13px;color:var(--cyan)}
+#card .head .voice[aria-pressed="false"]{color:var(--dim)}
 #card .head .res{font:700 14px var(--px)}
 #cMain{font-size:21px;font-weight:700;line-height:1.35;margin:0}
 #cFix{font-size:15px;color:var(--fg2);margin:0}
@@ -204,7 +205,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
 </div>
 <section id="card" hidden aria-label="방금 슛 피드백">
-  <div class="head"><span class="n" id="cN">SHOT FORM</span><span class="res" id="cRes"></span><span class="voice" id="cVoice"><svg class="ico s"><use href="#i-sound"/></svg>음성으로 알려줌</span></div>
+  <div class="head"><span style="display:flex;align-items:center;gap:10px"><span class="n" id="cN">SHOT FORM</span><span class="res" id="cRes"></span></span><button class="voice" id="cVoice" type="button" aria-pressed="true" aria-label="음성 안내 끄기"><svg class="ico s"><use href="#i-sound"/></svg><span>음성 켜짐</span></button></div>
   <div style="display:grid;gap:4px"><p id="cMain" aria-live="polite">첫 슛 기다리는 중</p><p id="cFix">머리부터 발끝까지 보이게 서서 쏘세요</p></div>
   <div class="chips" id="chips"></div>
   <button id="bMore" type="button" hidden>자세히 보기<svg class="ico s"><use href="#i-chev"/></svg></button>
@@ -1003,7 +1004,6 @@ function renderScore() {
 }
 function fixHtml(fix) { const i = fix.lastIndexOf(" · "); return i < 0 ? esc(fix) : `<span class="why">${esc(fix.slice(0, i))} · </span>${esc(fix.slice(i + 3))}`; }
 function renderCard(rec) {
-  $("#cVoice").hidden = !S.voice;
   if (!rec) {
     $("#cN").textContent = "SHOT FORM"; $("#cRes").innerHTML = ""; $("#cMain").textContent = "첫 슛 기다리는 중";
     $("#cFix").textContent = S.judge ? "머리부터 발끝까지 보이게 서서 쏘세요" : "폼만 분석해요 · 림을 지정하면 성공률도 기록";
@@ -1063,10 +1063,14 @@ function setVoice(on) {
   S.voice = on; store.set("voice", on);
   $("#bVoice").setAttribute("aria-pressed", on); $("#bVoice").querySelector("span").textContent = on ? "음성 안내 켜짐" : "음성 안내 꺼짐";
   $("#bVoice use").setAttribute("href", on ? "#i-sound" : "#i-mute");
-  $("#mVoiceV").textContent = on ? "켜짐" : "꺼짐"; $("#mVoice").setAttribute("aria-pressed", on); $("#cVoice").hidden = !on;
+  $("#mVoiceV").textContent = on ? "켜짐" : "꺼짐"; $("#mVoice").setAttribute("aria-pressed", on);
+  $("#cVoice").setAttribute("aria-pressed", on); $("#cVoice").setAttribute("aria-label", on ? "음성 안내 끄기" : "음성 안내 켜기");
+  $("#cVoice span").textContent = on ? "음성 켜짐" : "무음"; $("#cVoice use").setAttribute("href", on ? "#i-sound" : "#i-mute");
+  if (!on && window.speechSynthesis) try { speechSynthesis.cancel(); } catch {}
   if (on && window.speechSynthesis) try { speechSynthesis.getVoices(); } catch {}
 }
 $("#bVoice").onclick = () => setVoice(!S.voice);
+$("#cVoice").onclick = e => { e.stopPropagation(); setVoice(!S.voice); toast(S.voice ? "음성 안내 켜짐" : "무음 · 화면으로만 알려줘요", 1600); };
 
 /* ============ summary ============ */
 const FOCUS = {
