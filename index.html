@@ -73,7 +73,6 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .hint .ico{color:var(--cyan)}
 #setup .btn-line{background:var(--glass);font-weight:700}
 #setup .top,#setup .hint{pointer-events:none}   /* status only: taps go through to the rim underneath */
-}
 /* --- 3 live --- */
 #topbar{position:fixed;z-index:5;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding-left:max(0px,calc(env(safe-area-inset-left,0px) - 12px));padding-right:max(0px,calc(env(safe-area-inset-right,0px) - 12px))}
@@ -115,6 +114,16 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .rowi .v{font-size:13px;color:var(--fg2)}
 .rowi .r{font-size:12px;color:var(--dim);text-align:right;max-width:8.5em}
 .rowi.na strong{color:var(--fg2)}.rowi.na .v{color:var(--dim)}
+.gs{display:grid;gap:6px;margin-top:8px}
+.gs{grid-column:2/4}
+.gauge{display:grid;grid-template-columns:4.6em minmax(0,1fr) 6.2em;gap:8px;align-items:center;font-size:12px;color:var(--dim)}
+.gauge b{font-weight:500;color:var(--fg2);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.gt{position:relative;height:8px;border-radius:4px;background:var(--row)}
+.gt .band{position:absolute;top:0;bottom:0;border-radius:4px;background:rgba(120,225,150,.35)}
+.gt .band.b2{background:rgba(120,225,150,.15)}
+.gt .mk{position:absolute;top:-4px;width:6px;height:16px;border-radius:3px;background:var(--green);transform:translateX(-50%);box-shadow:0 0 0 2px var(--panel)}
+.gt .mk.bad{background:var(--orange)}
+.gauge.neutral .mk{background:var(--cyan)}
 .note{display:flex;align-items:center;gap:10px;background:#141a3d;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;color:var(--fg2)}
 .note .ico{color:var(--cyan)}
 .fixrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -187,6 +196,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M7 3v18M7 7h3M7 11h4M7 15h3M7 19h4"/></symbol>
   <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
+  <symbol id="i-rot" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
 </svg>
 
@@ -219,7 +229,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   </div>
   <div class="bottom">
     <div class="hint"><svg class="ico"><use href="#i-person"/></svg><span>사람이 여럿이면 슈터를 길게 눌러 고정</span></div>
-    <button class="btn-line" id="bSkip" type="button">건너뛰기 · 폼만 분석</button>
+    <div style="display:flex;gap:10px"><button class="btn-line" id="bSuRot" type="button" style="flex:0 0 auto;padding:0 16px;white-space:nowrap;background:var(--glass)" aria-label="화면이 누워 있으면 90도 돌리기"><svg class="ico"><use href="#i-rot"/></svg>화면 돌리기</button>
+    <button class="btn-line" id="bSkip" type="button" style="flex:1 1 0;white-space:nowrap">건너뛰기 · 폼만 분석</button></div>
   </div>
 </div>
 
@@ -244,6 +255,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <button type="button" id="mEnd"><svg class="ico"><use href="#i-flag"/></svg>연습 끝내고 요약 보기</button>
       <button type="button" id="mRec"><svg class="ico"><use href="#i-rec"/></svg><span id="mRecT">화면 녹화</span></button>
       <button type="button" id="mVoice" aria-pressed="true"><svg class="ico"><use href="#i-sound"/></svg>음성 안내<span class="val" id="mVoiceV">켜짐</span></button>
+      <button type="button" id="mRot"><svg class="ico"><use href="#i-rot"/></svg>화면 돌리기<span class="val" id="mRotV">그대로</span></button>
       <button type="button" id="mJudge"><svg class="ico"><use href="#i-rim"/></svg><span id="mJudgeT">성공/실패 판정</span><span class="val" id="mJudgeV">켜짐</span></button>
       <label><svg class="ico"><use href="#i-ruler"/></svg>키 (cm)<input id="sHeight" type="number" min="120" max="230" value="175" inputmode="numeric"></label>
       <label><svg class="ico"><use href="#i-chip"/></svg>분석 모델<select id="sModel"><option value="thunder">정확</option><option value="lightning">빠름</option></select></label>
@@ -312,7 +324,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("shotlive:" + k
                 set(k, v) { try { localStorage.setItem("shotlive:" + k, JSON.stringify(v)); } catch {} } };
 const S = {
   model: null, modelType: store.get("model", "thunder"), heightCm: store.get("height", 175),
-  rim: null, rimPick: [], picking: false, running: false, src: "cam",
+  rim: null, rimPick: [], picking: false, rot: 0, srcEl: null, running: false, src: "cam",
   W: 0, H: 0, k: 1,
   crop: null, kp: null, poseHist: [], busy: false,
   prevGray: null, pw: 0, ph: 0, pctx: null,
@@ -345,7 +357,7 @@ async function runPose(frameT) {
   const { m, sz } = S.model;
   const box = [[(c.cy - c.s / 2) / H, (c.cx - c.s / 2) / W, (c.cy + c.s / 2) / H, (c.cx + c.s / 2) / W]];
   const out = tf.tidy(() => {
-    const img = tf.browser.fromPixels(video).expandDims(0).toFloat();
+    const img = tf.browser.fromPixels(S.srcEl || video).expandDims(0).toFloat();
     const crop = tf.image.cropAndResize(img, box, [0], [sz, sz]).toInt();
     return m.execute(crop);
   });
@@ -384,7 +396,7 @@ function setupProc() {
   S.pctx = cv.getContext("2d", { willReadFrequently: true }); S.prevGray = null;
 }
 function grabGray() {
-  S.pctx.drawImage(video, 0, 0, S.pw, S.ph);
+  S.pctx.drawImage(S.srcEl || video, 0, 0, S.pw, S.ph);
   const px = S.pctx.getImageData(0, 0, S.pw, S.ph).data;
   const n = S.pw * S.ph, gray = new Uint8Array(n);
   for (let i = 0, j = 0; i < n; i++, j += 4) gray[i] = (px[j] * 77 + px[j + 1] * 150 + px[j + 2] * 29) >> 8;
@@ -449,7 +461,7 @@ function motionStep(t) {
       if (!head) continue;                                            // no shooter in view (recently)
       const bh = (bodyHeight() || 0) * sc; if (!bh) continue;
       if (Math.abs(p[0].x - sx) > bh * 0.9 || p[0].y > headY + bh * 0.1 || p[0].y < headY - bh * 1.6) continue; // ball must leave from the shooter
-      if (bh > rim.w * 4.5) continue;                                 // person too close to the camera
+      if (bh > rim.w * (S.lockOn ? 12 : 8)) continue;                  // someone right in front of the camera (the shooter is often much nearer than the rim)
       startShot(tr, t, headY, rim, p); break;
     }
   } else {
@@ -471,29 +483,39 @@ function motionFree(t, gray, prev) {
   for (let i = 0; i < gray.length; i++) { const v = Math.abs(gray[i] - prev[i]) > C.DIFF ? 1 : 0; mask[i] = v; moved += v; }
   if (moved / gray.length > 0.12) { S.tracks = []; S.camMoveUntil = t + 0.6; return; }
   if (t < (S.camMoveUntil || 0)) { S.tracks = []; return; }
-  if (S.shot) { if (t - S.shot.tStart > 1.4) finishShot(t);  // wait for the landing (drift, follow-through)
-    else followTrack(S.shot.track, mask, w, t, sc); return; }
+  if (S.shot) {
+    if (t - S.shot.tStart > 1.4) finishShot(t);                                  // grade after the landing (drift, follow-through)
+    else if (t - S.shot.tStart < 0.9 && !S.shot.gone) {                          // but follow the ball only while it can still be the ball:
+      followTrack(S.shot.track, mask, w, t, sc);                                 // once it leaves the frame the nearest blob is a hand
+      const q = S.shot.track.pts[S.shot.track.pts.length - 1]; if (q.y < S.ph * 0.04 || q.x < S.pw * 0.03 || q.x > S.pw * 0.97) S.shot.gone = true;
+    }
+    return;
+  }
   const head = headNow(t); if (!head) return;
   if (S.kp) { const core = [5, 6, 11, 12, 15, 16].reduce((a, i) => a + S.kp[i].s, 0) / 6; S.coreOk = core >= 0.4; }
   if (!S.coreOk || (bodyHeight() || 0) < S.H * 0.06) { S.tracks = []; return; }  // nobody clearly in view (empty court, far background)
   const bh = (bodyHeight() || 0) * sc; if (!bh) return;
   const headY = head.y * sc, sx = head.x * sc;
+  // close shooter (little room above the head): the ball is only seen for a few frames before it leaves the top,
+  // so let it start at chest height and ask for less climb
+  const close = headY < bh * 0.6;
   const x0 = Math.max(0, Math.round(sx - bh * 1.6)), x1 = Math.min(w, Math.round(sx + bh * 1.6));
-  const y0 = 0, y1 = Math.min(S.ph, Math.round(headY + bh * 0.1));
+  const y0 = 0, y1 = Math.min(S.ph, Math.round(headY + bh * (close ? 0.3 : 0.1)));
   const dmin = bh * 0.05, dmax = bh * 0.45;
   const cands = blobs(mask, w, x0, y0, x1, y1).filter(b => {
     const d = Math.max(b.bw, b.bh * 0.75);
     return d >= dmin && d <= dmax && b.bw / b.bh > 0.35 && b.bw / b.bh < 2.6 && b.a > 0.3 * b.bw * b.bh;
   });
-  assignTracks(cands, t, bh * 0.45, b => b.y < headY - bh * 0.05 && Math.abs(b.x - sx) < bh * 0.9, -bh * 3);
+  assignTracks(cands, t, bh * 0.45, b => b.y < headY + bh * (close ? 0.15 : -0.05) && Math.abs(b.x - sx) < bh * 0.9, -bh * 3);
   if (window.SHOT_DEBUG) console.log("[dbg]", t.toFixed(2), "bh", bh.toFixed(0), "head", headY.toFixed(0), sx.toFixed(0), "c", JSON.stringify(cands.map(c => [c.x | 0, c.y | 0, c.bw, c.bh])), "tr", JSON.stringify(S.tracks.map(tr => tr.pts.map(p => [p.x | 0, p.y | 0]))));
   for (const tr of S.tracks) {
-    const p = flightPart(tr); if (p.length < 4) continue;
-    const rise = (p[0].y - p[p.length - 1].y) / bh;
+    const p = flightPart(tr); if (p.length < (close ? 3 : 4)) continue;
+    const rise = (p[0].y - p[p.length - 1].y) / bh, need = close ? Math.min(0.5, Math.max(0.2, 0.6 * p[0].y / bh)) : 0.5;  // close: 60% of the room to the top edge
     let mono = 0; for (let i = 1; i < p.length; i++) if (p[i].y < p[i - 1].y) mono++;
-    if (!(rise > 0.5 && mono >= p.length - 2 && t - S.lastShotT > C.COOLDOWN)) continue;
+    if (!(rise > need && mono >= p.length - (close ? 1 : 2) && t - S.lastShotT > C.COOLDOWN)) continue;
     if (Math.abs(p[0].x - sx) > bh * 0.9 || p[0].y > headY + bh * 0.5 || p[0].y < headY - bh * 1.6) continue;  // head rises during the jump: allow a chest-high start
-    const armsUp = S.poseHist.some(f => f.t >= t - 0.8 && f.kp[0].s > 0.2 && [9, 10].some(i => f.kp[i].s > 0.2 && f.kp[i].y < f.kp[0].y));
+    const armsUp = S.poseHist.some(f => f.t >= t - 0.8 && [9, 10].some(i => f.kp[i].s > 0.2 && (f.kp[0].s > 0.2 ? f.kp[i].y < f.kp[0].y    // wrist above the head,
+      : [5, 6].some(j => f.kp[j].s > 0.2 && f.kp[i].y < f.kp[j].y - bh / sc * 0.15))));                                                    // or well above the shoulders when the head is cut off
     if (!armsUp) continue;  // a real shot always lifts a wrist above the head
     startShot(tr, t, headY, null, p); break;
   }
@@ -689,13 +711,15 @@ function measureShot(s) {
   // --- pre-shot dip: did the ball come down below the chest before going up
   const pre = win(-1.0, -0.1), wv = pre.filter(f => visA(f.kp[WR]) && visA(f.kp[SH]));
   if (detail && pre.length >= 4 && wv.length >= pre.length * 0.6) m.dip = wv.some(f => f.kp[WR].y > f.kp[SH].y + bodyH * 0.12);
-  // --- ball: launch angle (side), lateral at the rim (front), depth/entry angle (side + rim)
+  // --- ball: clean flight (after release, not stuck to a hand or the head) for the trail, launch angle (side),
+  //     lateral at the rim (front), depth/entry angle (side + rim)
+  const free = p => { const f = H.reduce((b, g) => Math.abs(g.t - p.t) < Math.abs(b.t - p.t) ? g : b, H[0]); return !f || Math.abs(f.t - p.t) > 0.05 || [0, 9, 10].every(j => f.kp[j].s < 0.3 || Math.hypot(f.kp[j].x - p.x, f.kp[j].y - p.y) > bodyH * 0.12); };
+  m.flight = fl.filter(p => p.t >= tR + 0.03 && free(p)).map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
   if (fl.length >= 3 && m.view === "side" && detail) {   // far shooter: too few clean flight points
     // direction only (frame times can repeat), median over point pairs so one stray blob can't swing it
-    const free = p => { const f = H.reduce((b, g) => Math.abs(g.t - p.t) < Math.abs(b.t - p.t) ? g : b, H[0]); return Math.abs(f.t - p.t) > 0.05 || [0, 9, 10].every(j => f.kp[j].s < 0.3 || Math.hypot(f.kp[j].x - p.x, f.kp[j].y - p.y) > bodyH * 0.12); };  // not stuck to a hand or the head
     const e = fl.filter(p => p.t >= tR + 0.03 && p.t <= tR + 0.4 && free(p)), ang = [];
     for (let i = 0; i < e.length; i++) for (let j = i + 1; j < e.length; j++) { const dx = e[j].x - e[i].x, dy = e[j].y - e[i].y; if (Math.hypot(dx, dy) > bodyH * 0.08) ang.push(Math.atan2(-dy, Math.abs(dx)) * 180 / Math.PI); }
-    if (ang.length >= 3) m.launch = median(ang);
+    if (ang.length >= 3) { m.launch = median(ang); m.launchAt = { x: Math.round(e[0].x), y: Math.round(e[0].y), dir: Math.sign(e[e.length - 1].x - e[0].x) || 1 }; }
   }
   if (S.rim && S.judge && fl.length >= 3) {
     const r = S.rim, cmR = RIM_CM / r.w;
@@ -797,6 +821,25 @@ function gradeShot(rec, hist) {
   if (cons.length) { const b = cons.find(x => x.bad); it("cons", "일관성", b ? "warn" : "ok", (b || cons[0]).txt + ` (최근 ${recent.length}개)`, b ? "흔들림" : "좋음", "작을수록 좋음"); items.cons.main = b && b.main; items.cons.short = (b || cons[0]).txt; }
   else it("cons", "일관성", "wait", "3개부터 계산해요", "3개부터", "작을수록 좋음");
 
+  // gauges for the detail sheet: value marker on a track with the target band (band2 = still OK, outside the ideal)
+  const gz = (label, v, lo, hi, a, b, txt, bad, b2) => isFinite(v) ? { label, v, lo, hi, a, b, txt, bad: !!bad, b2 } : null;
+  const add = (k, ...gs) => { if (items[k] && (items[k].state === "ok" || items[k].state === "warn")) items[k].gs = gs.filter(Boolean); };
+  add("lat", gz("좌우", m.latCm, -40, 40, -TH.LAT_OK, TH.LAT_OK, `${m.latCm > 0 ? "오른쪽" : "왼쪽"} ${r0(m.latCm)}cm`, Math.abs(m.latCm) > TH.LAT_OK));
+  add("arc", gz("발사각", m.launch, 25, 75, TH.LAUNCH_LO, 55, `${Math.round(m.launch)}°`, items.arc.state === "warn", [55, TH.LAUNCH_HI]),
+             gz("진입각", Math.abs(m.entry), 20, 70, 40, 50, `${Math.round(Math.abs(m.entry))}°`, false));
+  add("depth", gz("깊이", m.depthCm, -40, 40, TH.DEPTH_SHORT, TH.DEPTH_LONG, `${m.depthCm >= 0 ? "뒤" : "앞"} ${r0(m.depthCm)}cm`, items.depth.state === "warn"));
+  add("legs", gz("정점 대비", m.timingMs / 1000, -0.6, 0.3, -0.6, TH.FALL_MS / 1000, `${m.timingMs >= 0 ? "+" : ""}${(m.timingMs / 1000).toFixed(2)}초`, falling),
+              gz("앉은 깊이", m.dipCm, 0, 40, TH.LEG_CM, 40, `${Math.round(m.dipCm)}cm`, !legs));
+  add("bal", gz("착지 밀림", Math.abs(m.driftCm), 0, 50, 0, TH.DRIFT, `${r0(m.driftCm)}cm`, Math.abs(m.driftCm) > TH.DRIFT),
+             gz("기울기", m.leanDeg, -25, 25, front ? -TH.LEAN : -15, TH.LEAN, `${r0(m.leanDeg)}°`, front ? Math.abs(m.leanDeg) > TH.LEAN : (m.leanDeg > TH.LEAN || m.leanDeg < -15)),
+             gz("무게 쏠림", Math.abs(m.comCm), 0, 30, 0, TH.COM, `${r0(m.comCm)}cm`, Math.abs(m.comCm) > TH.COM),
+             gz("무릎 간격", m.kneeRatio * 100, 40, 130, TH.VALGUS * 100, 130, `${Math.round(m.kneeRatio * 100)}%`, m.kneeRatio < TH.VALGUS));
+  add("follow", gz("유지", m.followS, 0, 1.2, TH.FOLLOW, 1.2, `${m.followS != null ? m.followS.toFixed(1) : ""}초`, m.followS < TH.FOLLOW));
+  if (items.cons.state === "ok" || items.cons.state === "warn") items.cons.gs = [
+    recent.filter(x => x.detail && isFinite(x.timingMs)).length >= 3 ? gz("타이밍", sdT / 1000, 0, 0.2, 0, TH.SD_TIMING / 1000, `±${(sdT / 1000).toFixed(2)}초`, sdT > TH.SD_TIMING) : null,
+    recent.filter(x => isFinite(x.launch)).length >= 3 ? gz("발사각", sdA, 0, 8, 0, TH.SD_LAUNCH, `±${sdA.toFixed(1)}°`, sdA > TH.SD_LAUNCH) : null,
+    recent.filter(x => isFinite(x.latCm)).length >= 3 ? gz("좌우", sdL, 0, 25, 0, TH.SD_LAT, `±${Math.round(sdL)}cm`, sdL > TH.SD_LAT) : null].filter(Boolean);
+
   // ---- one line. 1) why it missed  2) common-criteria violation  3) consistency  4) praise
   let line = null;
   if (rec.made === false) {
@@ -838,7 +881,7 @@ function finishShot(t) {
   const made = S.judge ? s.netMax >= C.NET_MAKE : null;
   if (!s.relSure) refineRelease(s);
   const m = measureShot(s);
-  const rec = { n: s.n, made, auto: true, netMax: +s.netMax.toFixed(3), tRel: s.tRel, m, path: s.path.map(p => ({ x: p.x / (S.pw / S.W), y: p.y / (S.pw / S.W) })) };
+  const rec = { n: s.n, made, auto: true, netMax: +s.netMax.toFixed(3), tRel: s.tRel, m, path: m && m.flight && m.flight.length >= 2 ? m.flight : [] };  // only the clean flight is drawn
   Object.assign(rec, gradeShot(rec, S.shots));
   S.shots.push(rec);
   if (window.SHOT_STEP) console.log("[raw]", JSON.stringify({ n: rec.n, made, tRel: s.tRel, path: s.path.map(p => [+p.t.toFixed(3), +p.x.toFixed(1), +p.y.toFixed(1)]), pose: S.poseHist.filter(f => f.t > s.tRel - 1.8 && f.t < s.tRel + 1.4).map(f => [+f.t.toFixed(3), f.kp.map(k => [Math.round(k.x), Math.round(k.y), +k.s.toFixed(2)])]), ctx: { rim: S.rim, judge: S.judge, pw: S.pw, W: S.W, H: S.H, heightCm: S.heightCm } }));
@@ -858,7 +901,7 @@ function tag(s, x, y, col) { g.font = font(15, 1); const w = g.measureText(s).wi
 
 function draw(t) {
   const W = S.W, H = S.H, k = S.k;
-  g.drawImage(video, 0, 0, W, H);
+  g.drawImage(S.srcEl || video, 0, 0, W, H);
   const last = S.shots[S.shots.length - 1];
   if (S.rim && S.judge) {
     const r = S.rim; g.strokeStyle = "rgba(255,214,64,0.75)"; g.lineWidth = 3 * k;
@@ -869,10 +912,21 @@ function draw(t) {
   const sc = S.pw / S.W;
   const drawPath = (pts, col) => { g.strokeStyle = col; g.lineWidth = 4 * k; g.setLineDash([10 * k, 8 * k]); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); g.setLineDash([]); };
   if (S.shot) {
-    const pts = S.shot.track.pts.map(p => ({ x: p.x / sc, y: p.y / sc })); drawPath(pts, COL.yellow);
+    const pts = flightPart(S.shot.track).map(p => ({ x: p.x / sc, y: p.y / sc })); drawPath(pts, COL.yellow);
     const p = pts[pts.length - 1], r = 26 * k, L = r * 0.55; g.strokeStyle = COL.yellow; g.lineWidth = 3 * k;
     for (const sx of [-1, 1]) for (const sy of [-1, 1]) { g.beginPath(); g.moveTo(p.x + sx * r - sx * L, p.y + sy * r); g.lineTo(p.x + sx * r, p.y + sy * r); g.lineTo(p.x + sx * r, p.y + sy * r - sy * L); g.stroke(); }
-  } else if (S.banner && t < S.banner.until && last && last.path.length > 1) drawPath(last.path, S.banner.col);
+  } else if (S.banner && t < S.banner.until + 1 && last) {
+    if (last.path.length > 1) drawPath(last.path, S.banner.col);
+    const la = last.m && last.m.launchAt;
+    if (la && isFinite(last.m.launch)) {   // launch-angle wedge at the release point (side view)
+      const L = (last.m.bodyH || 300) * 0.32, a = last.m.launch * Math.PI / 180, ok = last.items.arc && last.items.arc.state === "ok", col = ok ? COL.yellow : COL.orange;
+      g.strokeStyle = col; g.lineWidth = 3 * k;
+      g.beginPath(); g.moveTo(la.x, la.y); g.lineTo(la.x + la.dir * L, la.y); g.stroke();
+      g.beginPath(); g.moveTo(la.x, la.y); g.lineTo(la.x + la.dir * Math.cos(a) * L, la.y - Math.sin(a) * L); g.stroke();
+      g.beginPath(); la.dir > 0 ? g.arc(la.x, la.y, L * 0.55, -a, 0) : g.arc(la.x, la.y, L * 0.55, Math.PI, Math.PI + a); g.stroke();
+      tag(`발사각 ${Math.round(last.m.launch)}°`, la.x + la.dir * L * 0.2 - (la.dir < 0 ? 150 * k : 0), la.y - Math.sin(a) * L - 34 * k, col);
+    }
+  }
   if (S.kp) {
     const kp = S.kp; g.strokeStyle = COL.cyan; g.lineWidth = 3.5 * k;
     for (const [a, b] of EDGES) if (kp[a].s > 0.25 && kp[b].s > 0.25) { g.beginPath(); g.moveTo(kp[a].x, kp[a].y); g.lineTo(kp[b].x, kp[b].y); g.stroke(); }
@@ -898,9 +952,9 @@ async function frame() {
   const t = now();
   if (video.readyState >= 2 && t !== lastFrameT) {
     lastFrameT = t;
-    motionStep(t);
+    prepFrame(); motionStep(t);
     if (!S.busy && !window.SHOT_NOPOSE) { S.busy = true; runPose(t).catch(e => console.warn(e)).finally(() => S.busy = false); }
-    draw(t);
+    draw(t); checkFraming(t);
     fpsN++; if (t - fpsT > 1) { S.fps = fpsN / (t - fpsT); fpsN = 0; fpsT = t; }
     if (!!S.shot !== S.wasTracking) { S.wasTracking = !!S.shot; renderScore(); }
   }
@@ -911,14 +965,81 @@ async function stepLoop() {  // test hook: every frame analysed, as on a fast ph
   video.pause(); const fps = window.SHOT_FPS || 30, n = Math.floor(Math.min(video.duration, window.SHOT_T1 || 1e9) * fps);
   for (let i = Math.max(1, Math.floor((window.SHOT_T0 || 0) * fps)); i < n; i++) {
     const t = i / fps; video.currentTime = t; await new Promise(r => video.addEventListener("seeked", r, { once: true }));
-    motionStep(t); await runPose(t); draw(t);
+    prepFrame(); motionStep(t); if (i % (window.SHOT_POSE_EVERY || 1) === 0) await runPose(t); draw(t); checkFraming(t);
     if (i % 300 === 0) console.log("[step]", i, n);
   }
   console.log("[done]", JSON.stringify(S.shots.map(s => ({ n: s.n, made: s.made, t: +s.tRel.toFixed(2) }))));
   showSummary();
 }
+// shooter filling the screen: the ball leaves the top right after release, so ask for more room
+function checkFraming(t) {
+  if (!S.kp || S.picking || $("#setup").hidden === false) return;
+  const bh = bodyHeight(), head = S.kp[0].s > 0.2 ? S.kp[0].y : NaN;
+  const tight = bh > S.H * 0.65 || (isFinite(head) && bh > 0 && head < bh * 0.35);
+  if (!tight) { S.tightSince = null; return; }
+  if (S.tightSince == null) S.tightSince = t;
+  if (t - S.tightSince > 1.5 && t - (S.tightHint ?? -99) > 30) {
+    S.tightHint = t; toast("사람이 너무 크게 나와요 · 폰을 1~2걸음 뒤로 (머리 위 공간 확보)", 3500);
+    if (!S.shots.length) $("#cFix").textContent = "머리 위로 공이 날아가는 게 보일 만큼 폰을 멀리 두세요";
+  }
+}
+// videos saved with the wrong rotation tag (phone held sideways with rotation lock on) show the court on its side:
+// every frame is turned upright here, once, and everything else reads S.srcEl
+function prepFrame() {
+  if (!S.rot) { S.srcEl = video; return; }
+  if (!S.fc) { S.fc = document.createElement("canvas"); S.fcx = S.fc.getContext("2d"); }
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (S.fc.width !== S.W || S.fc.height !== S.H) { S.fc.width = S.W; S.fc.height = S.H; }
+  const c = S.fcx; c.setTransform(1, 0, 0, 1, 0, 0);
+  if (S.rot === 90) { c.translate(vh, 0); c.rotate(Math.PI / 2); } else if (S.rot === 270) { c.translate(0, vw); c.rotate(-Math.PI / 2); } else { c.translate(vw, vh); c.rotate(Math.PI); }
+  c.drawImage(video, 0, 0); S.srcEl = S.fc;
+}
+// pick the rotation where the model sees a person best (files only; a live camera is always upright)
+async function autoRotate() {
+  // the shooter can be small and off-centre: look in several crops (3 big squares along the long side + a 3x3 grid of
+  // smaller ones) and keep the best person score per rotation
+  const { m, sz } = S.model;
+  const score = async rot => {
+    S.rot = rot; sizeCanvas(); prepFrame();
+    const W = S.W, H = S.H, sh = Math.min(W, H), boxes = [];
+    for (const f of [0, 0.5, 1]) { const x = (W - sh) * f, y = (H - sh) * f; boxes.push([y, x, sh]); }
+    const sm = sh * 0.6; for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) boxes.push([(H - sm) * i / 2, (W - sm) * j / 2, sm]);
+    const img = tf.tidy(() => tf.browser.fromPixels(S.srcEl).expandDims(0).toFloat());
+    let best = 0;
+    for (const [y, x, sq] of boxes) {
+      const out = tf.tidy(() => m.execute(tf.image.cropAndResize(img, [[y / H, x / W, (y + sq) / H, (x + sq) / W]], [0], [sz, sz]).toInt()));
+      const d = await out.data(); out.dispose();
+      const sc = []; for (let i = 0; i < 17; i++) sc.push(d[i * 3 + 2]); sc.sort((a, c) => c - a);
+      best = Math.max(best, sc.slice(0, 10).reduce((a, c) => a + c, 0) / 10);
+    }
+    img.dispose();
+    return best;
+  };
+  // same few moments every time (a playing video would give a different frame on every run)
+  const was = video.currentTime, playing = !video.paused, dur = isFinite(video.duration) ? video.duration : 0;
+  video.pause();
+  const seek = t => new Promise(res => { if (Math.abs(video.currentTime - t) < 0.01) return res(); video.addEventListener("seeked", res, { once: true }); video.currentTime = t; });
+  const r = { 0: 0, 90: 0, 270: 0 };
+  try {
+    for (const t of [0.5, 1.5, 3].filter(t => t < dur || !dur).slice(0, dur ? 3 : 1)) {
+      if (dur) await seek(t);
+      for (const rot of [0, 90, 270]) r[rot] += await score(rot);
+    }
+  } catch (e) { console.warn(e); r[0] = 99; }       // something failed: leave the video as is
+  if (dur) await seek(was);
+  if (playing) video.play().catch(() => {});
+  const best = r[90] >= r[270] ? 90 : 270;
+  S.rot = r[best] > r[0] * 1.2 && r[best] - r[0] > 0.15 ? best : 0; sizeCanvas(); prepFrame();
+  if (window.SHOT_DEBUG || window.SHOT_STEP) console.log("[rot]", JSON.stringify(r), "→", S.rot);
+  if (S.rot) toast("옆으로 누운 영상이라 바로 세웠어요", 2600);
+}
+function setRotation(rot) {
+  S.rot = rot; sizeCanvas(); prepFrame();
+  S.crop = null; S.kp = null; S.poseHist = []; S.tracks = []; S.shot = null; S.shooter = null; S.lockOn = false; syncUi();
+  if (S.judge || S.rim || !$("#setup").hidden) { S.rim = null; S.judge = false; openSetup(); } renderScore();
+}
 function sizeCanvas() {
-  S.W = video.videoWidth; S.H = video.videoHeight; S.k = Math.min(S.W, S.H) / 720 * (S.W > S.H ? 0.9 : 1);
+  const sw = !!(S.rot % 180); S.W = sw ? video.videoHeight : video.videoWidth; S.H = sw ? video.videoWidth : video.videoHeight; S.k = Math.min(S.W, S.H) / 720 * (S.W > S.H ? 0.9 : 1);
   hud.width = S.W; hud.height = S.H; setupProc();
 }
 async function begin(src) {
@@ -937,7 +1058,9 @@ async function begin(src) {
     await video.play();
   } catch (e) { $("#err").textContent = src === "cam" ? "카메라를 열 수 없어요. 브라우저에서 카메라 권한을 허용해 주세요 (https 주소에서만 돼요)." : "영상을 재생할 수 없어요."; console.error(e); $("#toast").hidden = true; return; }
   await new Promise(r => video.readyState >= 1 ? r() : video.onloadedmetadata = r);
-  sizeCanvas();
+  S.rot = 0; sizeCanvas();
+  if (window.SHOT_ROT != null) { S.rot = window.SHOT_ROT; sizeCanvas(); }
+  else if (src === "file") { await new Promise(r => video.readyState >= 2 ? r() : video.addEventListener("loadeddata", r, { once: true })); await autoRotate(); }
   S.sessionT0 = Date.now(); S.shots = []; S.shotSeq = 0; S.handVotes = null; S.rim = null; S.judge = false;
   $("#start").hidden = true; $("#toast").hidden = true;
   if (window.SHOT_SHOOTER) setShooter(window.SHOT_SHOOTER);
@@ -964,6 +1087,7 @@ function rimTap(p) {
   if (rim.w < 12) { toast("너무 좁아요. 다시 탭해 주세요"); S.rimPick = []; $("#suStep").textContent = "1 / 2"; $("#suText").innerHTML = "림의 <b>왼쪽 끝</b>을 탭하세요."; return; }
   S.rim = rim; S.judge = true; S.tracks = []; S.shot = null; showLive(); renderScore(); toast("림 설정 완료 · 이제 쏘세요");
 }
+$("#bSuRot").onclick = () => { setRotation(S.rot === 0 ? 90 : S.rot === 90 ? 270 : 0); toast("화면 " + ROT_TXT[S.rot], 1600); };
 $("#bSkip").onclick = () => { S.judge = false; S.tracks = []; S.shot = null; showLive(); renderScore(); renderCard(S.shots[S.shots.length - 1] || null); toast("폼만 분석해요"); };
 function clientToVideo(ev) {
   const r = hud.getBoundingClientRect(), s = Math.min(r.width / S.W, r.height / S.H);
@@ -1031,9 +1155,14 @@ function openDetail(rec) {
   const its = ROW_ORDER.map(k => rec.items[k]).filter(Boolean).sort((a, b) => rank[a.state] - rank[b.state] || ROW_ORDER.indexOf(a.key) - ROW_ORDER.indexOf(b.key));
   const icon = st => st === "ok" ? `<svg class="ico" style="color:var(--green)"><use href="#i-ok-c"/></svg>` : st === "warn" ? `<svg class="ico" style="color:var(--orange)"><use href="#i-warn-c"/></svg>` : `<svg class="ico" style="color:#6b75a3"><use href="#i-na-c"/></svg>`;
   const m = rec.m || {};
-  const style = [isFinite(m.jumpCm) ? `점프 ~${Math.round(m.jumpCm)}cm` : "", isFinite(m.dipCm) ? `앉은 깊이 ${Math.round(m.dipCm)}cm` : "", isFinite(m.elbowExt) && m.view === "side" ? `팔꿈치 ${Math.round(m.elbowExt)}°` : ""].filter(Boolean).join(" · ");
-  $("#dRows").innerHTML = its.map(it => `<div class="rowi ${it.state}">${icon(it.state)}<div><strong>${esc(it.label)}</strong><span class="v">${esc(it.value)}</span></div><span class="r">${esc(it.ref)}</span></div>`).join("")
-    + (style ? `<div class="rowi na">${icon("na")}<div><strong>참고 (평가 안 함)</strong><span class="v">${esc(style)}</span></div><span class="r">사람마다 달라요</span></div>` : "");
+  const pct = (v, g) => Math.max(0, Math.min(100, (v - g.lo) / (g.hi - g.lo) * 100));
+  const gauge = (g, neutral) => `<div class="gauge${neutral ? " neutral" : ""}"><span>${esc(g.label)}</span><div class="gt" role="img" aria-label="${esc(g.label)} ${esc(g.txt)}">`
+    + (neutral ? "" : `<i class="band" style="left:${pct(g.a, g)}%;width:${pct(g.b, g) - pct(g.a, g)}%"></i>`)
+    + (g.b2 ? `<i class="band b2" style="left:${pct(g.b2[0], g)}%;width:${pct(g.b2[1], g) - pct(g.b2[0], g)}%"></i>` : "")
+    + `<i class="mk${g.bad ? " bad" : ""}" style="left:${pct(g.v, g)}%"></i></div><b>${esc(g.txt)}</b></div>`;
+  const styleGs = [isFinite(m.jumpCm) ? { label: "점프", v: m.jumpCm, lo: 0, hi: 60, txt: `~${Math.round(m.jumpCm)}cm` } : null, isFinite(m.elbowExt) && m.view === "side" ? { label: "팔꿈치", v: m.elbowExt, lo: 90, hi: 180, txt: `${Math.round(m.elbowExt)}°` } : null].filter(Boolean);
+  $("#dRows").innerHTML = its.map(it => `<div class="rowi ${it.state}">${icon(it.state)}<div><strong>${esc(it.label)}</strong><span class="v">${esc(it.value)}</span></div><span class="r">${esc(it.ref)}</span>${it.gs && it.gs.length ? `<div class="gs">${it.gs.map(g => gauge(g)).join("")}</div>` : ""}</div>`).join("")
+    + (styleGs.length ? `<div class="rowi na">${icon("na")}<div><strong>참고 (평가 안 함)</strong><span class="v">사람마다 달라요</span></div><span class="r"></span><div class="gs">${styleGs.map(g => gauge(g, true)).join("")}</div></div>` : "");
   const view = m.view || "front";
   let note = view === "front" ? "지금은 <b style='color:var(--fg)'>정면</b> 촬영이에요. 측면에서 찍으면 아치와 깊이도 볼 수 있어요." : "지금은 <b style='color:var(--fg)'>측면</b> 촬영이에요. 정면에서 찍으면 좌우 직선과 무릎·무게중심도 볼 수 있어요.";
   if (!S.judge) note += " 림을 지정하면 성공률도 기록해요.";
@@ -1126,9 +1255,11 @@ $("#bCam").onclick = () => begin("cam");
 $("#fileIn").onchange = e => { const f = e.target.files[0]; if (!f) return; video.src = URL.createObjectURL(f); begin("file"); };
 $("#bFile").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fileIn").click(); } };
 $("#bRim").onclick = () => openSetup();
-$("#bMenu").onclick = () => openSheet("#menu");
+$("#bMenu").onclick = () => { $("#mRotV").textContent = ROT_TXT[S.rot || 0]; openSheet("#menu"); };
 $("#mEnd").onclick = () => showSummary();
 $("#mVoice").onclick = () => setVoice(!S.voice);
+const ROT_TXT = { 0: "그대로", 90: "오른쪽으로 90°", 270: "왼쪽으로 90°", 180: "뒤집기" };
+$("#mRot").onclick = () => { closeSheets(); setRotation(S.rot === 0 ? 90 : S.rot === 90 ? 270 : 0); toast("화면 " + ROT_TXT[S.rot]); };
 $("#mJudge").onclick = () => {
   closeSheets();
   if (S.judge) { S.judge = false; S.shot = null; S.tracks = []; syncUi(); renderScore(); toast("판정 끔 · 폼만 분석"); }
