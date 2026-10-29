@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e122e">
+<title>슛폼 라이브</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="슛폼 라이브">
+<style>
+@font-face{font-family:"Galmuri11";src:url("fonts/Galmuri11.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11.woff2") format("woff2");font-display:swap}
+@font-face{font-family:"Galmuri11";font-weight:700;src:url("fonts/Galmuri11-Bold.woff2") format("woff2"),url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11-Bold.woff2") format("woff2");font-display:swap}
+:root{
+  /* camera HUD: full-bleed video, pixel-type overlay, controls in thumb reach */
+  --bg:#070914; --panel:#0e122ee6; --line:#283264; --fg:#ebf0ff; --dim:#7882aa;
+  --cyan:#5acdff; --green:#78e196; --orange:#ff8c3c; --yellow:#ffd640; --red:#ff5a5a;
+  --px:"Galmuri11",ui-monospace,"Apple SD Gothic Neo","Noto Sans KR",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--px);-webkit-tap-highlight-color:transparent;overflow:hidden}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}
+#video{position:absolute;width:100%;height:100%;object-fit:contain;opacity:0}
+#hud{position:absolute;width:100%;height:100%;object-fit:contain;touch-action:none}
+.bar{position:fixed;left:0;right:0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:5;
+  padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+#top{top:0;padding-top:calc(env(safe-area-inset-top,0px) + 8px);justify-content:flex-end}
+#bottom{bottom:0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
+button,.btn{font:700 15px var(--px);color:var(--fg);background:var(--panel);border:2px solid var(--line);border-radius:0;
+  padding:10px 14px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+button.on{border-color:var(--red);color:var(--red)}
+button.ok{border-color:var(--green);color:var(--green)}
+button.ng{border-color:var(--red);color:var(--red)}
+button[disabled]{opacity:.35}
+#toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:9;background:var(--panel);border:2px solid var(--yellow);
+  color:var(--yellow);padding:14px 18px;font:700 16px var(--px);text-align:center;max-width:88vw;pointer-events:none}
+/* start sheet */
+#sheet{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#070914f2;overflow:auto;
+  padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.card{width:100%;max-width:440px;display:grid;gap:16px}
+.card h1{margin:0;font:700 30px var(--px);color:var(--yellow);letter-spacing:.02em}
+.card p{margin:0;color:var(--dim);line-height:1.6}
+.card ol{margin:0;padding-left:20px;line-height:1.8}
+.card ol b{color:var(--cyan)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 160px;justify-content:center}
+.big{background:var(--yellow);color:#0e122e;border-color:var(--yellow);font-size:17px;min-height:54px}
+label.field{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--line);padding:8px 12px;background:var(--panel)}
+label.field input,label.field select{font:700 16px var(--px);background:transparent;color:var(--fg);border:0;text-align:right;width:7em}
+label.field select option{background:#0e122e}
+#err{color:var(--red);min-height:1.4em}
+#settings{position:fixed;inset:auto 0 0 0;z-index:8;background:var(--panel);border-top:2px solid var(--line);display:grid;gap:10px;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+#settings h2{margin:0;font:700 18px var(--px);color:var(--cyan)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" playsinline muted></video>
+  <canvas id="hud"></canvas>
+</div>
+
+<div class="bar" id="top" hidden>
+  <button id="bRim" type="button">◎ 림 설정</button>
+  <button id="bRec" type="button">● 녹화</button>
+  <button id="bSet" type="button">⚙</button>
+</div>
+<div class="bar" id="bottom" hidden>
+  <button id="bMake" type="button" class="ok" disabled>방금 슛 = 성공</button>
+  <button id="bMiss" type="button" class="ng" disabled>= 실패</button>
+  <button id="bUndo" type="button" disabled>삭제</button>
+</div>
+<div id="toast" hidden></div>
+
+<div id="settings" hidden>
+  <h2>설정</h2>
+  <label class="field">키 (cm) <input id="sHeight" type="number" min="120" max="230" value="175"></label>
+  <label class="field">모델
+    <select id="sModel"><option value="thunder">정확 (Thunder)</option><option value="lightning">빠름 (Lightning)</option></select></label>
+  <label class="field">성공 판정 민감도 <input id="sNet" type="number" step="0.01" min="0.1" max="0.9" value="0.40"></label>
+  <div class="row"><button id="bReset" type="button" class="ng">기록 초기화</button><button id="bClose" type="button">닫기</button></div>
+</div>
+
+<div id="sheet">
+  <div class="card">
+    <h1>SHOT FORM LIVE</h1>
+    <p>폰 카메라로 슛을 비추면 관절, 공 궤적, 성공/실패, 릴리즈 타이밍이 바로 뜹니다. 분석은 전부 이 폰 안에서 돌아가요.</p>
+    <ol>
+      <li>폰을 <b>삼각대에 고정</b>하고 림과 슈터가 한 화면에 다 나오게</li>
+      <li>시작 후 화면에서 <b>림 왼쪽 끝 → 오른쪽 끝</b>을 차례로 탭</li>
+      <li>쏘면 끝. 판정이 틀리면 아래 버튼으로 고치기</li>
+    </ol>
+    <label class="field">키 (cm) <input id="hInit" type="number" min="120" max="230" value="175"></label>
+    <div class="row">
+      <button id="bCam" type="button" class="big">카메라로 시작</button>
+      <label class="btn" for="fileIn">영상 파일로 테스트</label>
+      <input id="fileIn" type="file" accept="video/*" hidden>
+    </div>
+    <div id="err" role="alert"></div>
+    <p style="font-size:12px">처음 한 번은 AI 모델(약 13MB)을 내려받아서 몇 초 걸려요.</p>
+  </div>
+</div>
+
+<script src="vendor/tf.min.js"></script>
+<script>
+"use strict";
+/* ============ config ============ */
+const MODEL_BASES = window.SHOT_MODEL_BASE ? [window.SHOT_MODEL_BASE] : ["models/", "https://cdn.jsdelivr.net/npm/@vladmandic/human-models@3.0.4/models/"];
+const C = { // tunables (proc = motion analysis resolution)
+  PROC_W: 270, DIFF: 22, NET_MAKE: 0.40, NET_EXIT: 0.20,
+  BALL_MIN: 0.12, BALL_MAX: 0.8,       // ball diameter, in rim widths
+  RISE_MIN: 1.4,                        // upward travel (rim widths) before a track counts as a shot
+  COOLDOWN: 1.5, FLIGHT_MAX: 1.8, JUDGE: 1.4,
+};
+const $ = s => document.querySelector(s);
+const video = $("#video"), hud = $("#hud"), g = hud.getContext("2d");
+const store = { get(k, d) { try { const v = localStorage.getItem("shotlive:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem("shotlive:" + k, JSON.stringify(v)); } catch {} } };
+const S = {
+  model: null, modelType: store.get("model", "thunder"), heightCm: store.get("height", 175),
+  rim: null, rimPick: [], picking: false, running: false, src: "cam",
+  W: 0, H: 0, k: 1,
+  crop: null, kp: null, poseHist: [], busy: false,
+  prevGray: null, pw: 0, ph: 0, pctx: null,
+  tracks: [], nextId: 1, shot: null, lastShotT: -99,
+  shots: [], banner: null, debug: { net: 0 }, fps: 0,
+};
+C.NET_MAKE = store.get("net2", C.NET_MAKE);
+const t0 = performance.now();
+const now = () => (S.src === "file" ? video.currentTime : (performance.now() - t0) / 1000);
+
+function toast(msg, ms = 2200) { const el = $("#toast"); el.textContent = msg; el.hidden = false; clearTimeout(toast.t); if (ms) toast.t = setTimeout(() => el.hidden = true, ms); }
+
+/* ============ model ============ */
+async function loadModel(type) {
+  await tf.ready();
+  try { await tf.setBackend("webgl"); } catch {}
+  let m = null, err;
+  for (const base of MODEL_BASES) { try { m = await tf.loadGraphModel(base + "movenet-" + type + ".json"); break; } catch (e) { err = e; } }
+  if (!m) throw err;
+  const sz = type === "thunder" ? 256 : 192;
+  tf.tidy(() => m.execute(tf.zeros([1, sz, sz, 3], "int32")));
+  return { m, sz };
+}
+async function runPose(frameT) {
+  const W = S.W, H = S.H;
+  let c = S.crop;
+  if (!c) { const s = Math.min(W, H) * (H > W ? 1 : 0.95); c = { cx: W / 2, cy: H > W ? H * 0.62 : H * 0.55, s }; }
+  const { m, sz } = S.model;
+  const box = [[(c.cy - c.s / 2) / H, (c.cx - c.s / 2) / W, (c.cy + c.s / 2) / H, (c.cx + c.s / 2) / W]];
+  const out = tf.tidy(() => {
+    const img = tf.browser.fromPixels(video).expandDims(0).toFloat();
+    const crop = tf.image.cropAndResize(img, box, [0], [sz, sz]).toInt();
+    return m.execute(crop);
+  });
+  const d = await out.data(); out.dispose();
+  const kp = [];
+  for (let i = 0; i < 17; i++) kp.push({ x: (c.cx - c.s / 2) + d[i * 3 + 1] * c.s, y: (c.cy - c.s / 2) + d[i * 3] * c.s, s: d[i * 3 + 2] });
+  const good = kp.filter(p => p.s > 0.25);
+  if (good.length < 7) { S.crop = null; S.kp = null; return; }
+  const xs = good.map(p => p.x), ys = good.map(p => p.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const h = Math.max(y1 - y0, x1 - x0);
+  S.crop = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, s: Math.max(h * 1.6, Math.min(W, H) * 0.18) };
+  // light smoothing for display
+  if (S.kp) for (let i = 0; i < 17; i++) { if (kp[i].s > 0.25 && S.kp[i].s > 0.25) { kp[i].x = kp[i].x * 0.65 + S.kp[i].x * 0.35; kp[i].y = kp[i].y * 0.65 + S.kp[i].y * 0.35; } }
+  S.kp = kp;
+  S.poseHist.push({ t: frameT, kp });
+  while (S.poseHist.length && S.poseHist[0].t < frameT - 4) S.poseHist.shift();
+}
+
+/* ============ motion / ball ============ */
+function setupProc() {
+  S.pw = C.PROC_W * (S.W > S.H ? 16 / 9 : 1) | 0; S.ph = Math.round(S.pw * S.H / S.W);
+  const cv = document.createElement("canvas"); cv.width = S.pw; cv.height = S.ph;
+  S.pctx = cv.getContext("2d", { willReadFrequently: true }); S.prevGray = null;
+}
+function grabGray() {
+  S.pctx.drawImage(video, 0, 0, S.pw, S.ph);
+  const px = S.pctx.getImageData(0, 0, S.pw, S.ph).data;
+  const n = S.pw * S.ph, gray = new Uint8Array(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) gray[i] = (px[j] * 77 + px[j + 1] * 150 + px[j + 2] * 29) >> 8;
+  return gray;
+}
+function blobs(mask, w, x0, y0, x1, y1) {
+  const out = [], seen = new Uint8Array(mask.length), st = [];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = y * w + x; if (!mask[i] || seen[i]) continue;
+    let a = 0, sx = 0, sy = 0, bx0 = x, bx1 = x, by0 = y, by1 = y; st.push(i); seen[i] = 1;
+    while (st.length) {
+      const q = st.pop(), qx = q % w, qy = (q / w) | 0; a++; sx += qx; sy += qy;
+      if (qx < bx0) bx0 = qx; if (qx > bx1) bx1 = qx; if (qy < by0) by0 = qy; if (qy > by1) by1 = qy;
+      const nb = [q - 1, q + 1, q - w, q + w];
+      for (const r of nb) { const rx = r % w, ry = (r / w) | 0; if (rx < x0 || rx >= x1 || ry < y0 || ry >= y1) continue; if (mask[r] && !seen[r]) { seen[r] = 1; st.push(r); } }
+      if (a > 4000) break;
+    }
+    out.push({ x: sx / a, y: sy / a, a, bw: bx1 - bx0 + 1, bh: by1 - by0 + 1 });
+  }
+  return out;
+}
+function motionStep(t) {
+  const gray = grabGray();
+  const prev = S.prevGray; S.prevGray = gray;
+  if (!prev || !S.rim) return;
+  const sc = S.pw / S.W, w = S.pw, rim = { x: S.rim.x * sc, y: S.rim.y * sc, w: S.rim.w * sc };
+  const mask = new Uint8Array(gray.length);
+  let moved = 0;
+  for (let i = 0; i < gray.length; i++) { const v = Math.abs(gray[i] - prev[i]) > C.DIFF ? 1 : 0; mask[i] = v; moved += v; }
+  if (moved / gray.length > 0.12) { S.tracks = []; S.camMoveUntil = t + 0.6; if (S.shot && S.shot.phase === "flight") S.shot = null; return; }
+  if (t < (S.camMoveUntil || 0)) { S.tracks = []; return; }
+  // 1) net zone activity
+  const nx0 = Math.max(0, Math.round(rim.x - rim.w * 0.36)), nx1 = Math.min(w, Math.round(rim.x + rim.w * 0.36));
+  const ny0 = Math.max(0, Math.round(rim.y + rim.w * 0.22)), ny1 = Math.min(S.ph, Math.round(rim.y + rim.w * 0.95));
+  let cnt = 0, tot = 0;
+  for (let y = ny0; y < ny1; y++) for (let x = nx0; x < nx1; x++) { tot++; cnt += mask[y * w + x]; }
+  const net = tot ? cnt / tot : 0; S.debug.net = net;
+  // 2) ball candidates in flight corridor
+  let headY = S.ph * 0.8, sx = rim.x;
+  if (S.kp && S.kp[0].s > 0.2) { headY = S.kp[0].y * sc; sx = S.kp[0].x * sc; }
+  const x0 = Math.max(0, Math.round(Math.min(rim.x, sx) - rim.w * 2.2)), x1 = Math.min(w, Math.round(Math.max(rim.x, sx) + rim.w * 2.2));
+  const y0 = Math.max(0, Math.round(rim.y - rim.w * 1.5)), y1 = Math.min(S.ph, Math.round(headY + rim.w * 0.2));
+  const dmin = rim.w * C.BALL_MIN, dmax = rim.w * C.BALL_MAX;
+  const cands = blobs(mask, w, x0, y0, x1, y1).filter(b => {
+    const d = Math.max(b.bw, b.bh * 0.75);
+    return d >= dmin && d <= dmax && b.bw / b.bh > 0.35 && b.bw / b.bh < 2.6 && b.a > 0.3 * b.bw * b.bh;
+  });
+  // 3) tracking
+  for (const tr of S.tracks) tr.hit = false;
+  for (const b of cands) {
+    let best = null, bd = 1e9;
+    for (const tr of S.tracks) {
+      const p = tr.pts[tr.pts.length - 1], dt = t - p.t; if (dt <= 0 || dt > 0.2) continue;
+      const px = p.x + tr.vx * dt, py = p.y + tr.vy * dt;
+      const dd = Math.hypot(b.x - px, b.y - py);
+      if (dd < rim.w * 0.9 && dd < bd) { bd = dd; best = tr; }
+    }
+    if (best && !best.hit) {
+      const p = best.pts[best.pts.length - 1], dt = t - p.t;
+      best.vx = (b.x - p.x) / dt; best.vy = (b.y - p.y) / dt; best.pts.push({ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) }); best.hit = true;
+    } else if (b.y < headY - rim.w * 0.1 && !(Math.abs(b.x - rim.x) < rim.w * 0.7 && b.y < rim.y + rim.w * 1.2)) {
+      S.tracks.push({ id: S.nextId++, pts: [{ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) }], vx: 0, vy: -rim.w * 6, hit: true });
+    }
+  }
+  S.tracks = S.tracks.filter(tr => t - tr.pts[tr.pts.length - 1].t < 0.25 && tr.pts.length < 80);
+  // 4) shot state machine
+  if (!S.shot) {
+    for (const tr of S.tracks) {
+      const p = tr.pts; if (p.length < 4) continue;
+      const rise = (p[0].y - p[p.length - 1].y) / rim.w;
+      let mono = 0; for (let i = 1; i < p.length; i++) if (p[i].y < p[i - 1].y) mono++;
+      if (!(rise > C.RISE_MIN && mono >= p.length - 2 && t - S.lastShotT > C.COOLDOWN)) continue;
+      if (!S.kp || S.kp[0].s < 0.2) continue;                       // no shooter in view
+      const bh = (bodyHeight() || 0) * sc; if (!bh) continue;
+      if (Math.abs(p[0].x - sx) > bh * 0.9 || p[0].y > headY + bh * 0.1 || p[0].y < headY - bh * 1.6) continue; // ball must leave from the shooter
+      if (bh > rim.w * 4.5) continue;                                 // person too close to the camera
+      startShot(tr, t, headY, rim); break;
+    }
+  } else {
+    const s = S.shot;
+    if (s.phase === "judge" && !s.exitIn) {
+      const ex0 = Math.max(0, Math.round(rim.x - rim.w * 0.45)), ex1 = Math.min(w, Math.round(rim.x + rim.w * 0.45));
+      const ey0 = Math.round(rim.y + rim.w * 0.95), ey1 = Math.min(S.ph, Math.round(rim.y + rim.w * 2.4));
+      if (ey0 < ey1 && blobs(mask, w, ex0, ey0, ex1, ey1).some(b => { const d = Math.max(b.bw, b.bh * 0.75); return d >= dmin && d <= dmax && b.a > 0.3 * b.bw * b.bh; })) s.exitIn = true;
+    }
+    updateShot(t, net, rim);
+  }
+}
+function startShot(tr, t, headYp, rim) {
+  const p = tr.pts, a = p[0], b = p[Math.min(2, p.length - 1)];
+  const vy = (b.y - a.y) / Math.max(1e-3, b.t - a.t);
+  let headTop = headYp;
+  const bodyH = bodyHeight();
+  if (bodyH) headTop = headYp - 0.1 * bodyH * (S.pw / S.W);
+  let tRel = a.t + (headTop - a.y) / vy; if (!(tRel < a.t) || a.t - tRel > 0.5) tRel = a.t - 0.08;
+  S.shot = { n: S.shots.length + 1, tRel, track: tr, phase: "flight", tStart: t, netMax: 0, netSum: 0, tJudge: 0, path: tr.pts };
+  S.lastShotT = t;
+}
+function updateShot(t, net, rim) {
+  const s = S.shot;
+  if (s.phase === "flight") {
+    const p = s.track.pts[s.track.pts.length - 1];
+    s.minY = Math.min(s.minY ?? 1e9, p.y);
+    if (p.y < rim.y + rim.w * 0.7 || t - s.tStart > C.FLIGHT_MAX || !S.tracks.includes(s.track)) {
+      if (s.minY > rim.y + rim.w * 1.3 || Math.abs(p.x - rim.x) > rim.w * 2.5) { S.shot = null; return; }  // never reached the rim: not a shot
+      s.phase = "judge"; s.tJudge = t;
+    }
+  }
+  if (s.phase === "judge") {
+    s.netMax = Math.max(s.netMax, net); s.netSum += net;
+    if (t - s.tJudge > C.JUDGE) finishShot(t);
+  }
+}
+function bodyHeight() {
+  const h = S.poseHist.slice(-30).map(f => ank(f.kp) - f.kp[0].y).filter(v => v > 0);
+  return h.length ? median(h) : 0;
+}
+const median = a => { const b = [...a].sort((x, y) => x - y); return b.length ? b[b.length >> 1] : NaN; };
+const ank = kp => { const v = [kp[15], kp[16]].filter(p => p.s > 0.2); return v.length ? v.reduce((s, p) => s + p.y, 0) / v.length : NaN; };
+const hipY = kp => { const v = [kp[11], kp[12]].filter(p => p.s > 0.2); return v.length ? v.reduce((s, p) => s + p.y, 0) / v.length : NaN; };
+const ankX = kp => { const v = [kp[15], kp[16]].filter(p => p.s > 0.2); return v.length ? v.reduce((s, p) => s + p.x, 0) / v.length : NaN; };
+
+function analyzeForm(tRel) {
+  const H = S.poseHist, within = (a, b) => H.filter(f => f.t >= tRel + a && f.t <= tRel + b);
+  const base = within(-1.3, -0.45); if (base.length < 4) return null;
+  const ground = median(base.map(f => ank(f.kp)).filter(isFinite));
+  const bodyH = median(base.map(f => ank(f.kp) - f.kp[0].y).filter(v => v > 0));
+  const hip0 = median(base.map(f => hipY(f.kp)).filter(isFinite));
+  const cmPx = 0.87 * S.heightCm / bodyH;
+  const air = within(-0.45, 0.65).filter(f => isFinite(ank(f.kp)));
+  if (!air.length) return null;
+  let ap = air[0]; for (const f of air) if (ank(f.kp) < ank(ap.kp)) ap = f;
+  const jumpCm = Math.max(0, (ground - ank(ap.kp)) * cmPx);
+  const load = within(-0.9, 0.05).map(f => hipY(f.kp)).filter(isFinite);
+  const dipCm = load.length ? Math.max(0, (Math.max(...load) - hip0) * cmPx) : NaN;
+  const before = median(within(-0.9, -0.2).map(f => ankX(f.kp)).filter(isFinite));
+  const after = median(within(0.5, 0.95).map(f => ankX(f.kp)).filter(isFinite));
+  const driftCm = isFinite(before) && isFinite(after) ? Math.abs(after - before) * cmPx : NaN;
+  const timingMs = jumpCm >= 4 ? (tRel - ap.t) * 1000 : NaN;
+  return { jumpCm, dipCm, driftCm, timingMs, tApex: ap.t };
+}
+function feedback(r) {
+  if (!r) return ["몸이 잘 안 보였어요", "전신이 나오게 찍어주세요"];
+  const out = [];
+  if (!isFinite(r.timingMs)) out.push("점프 거의 없음 (세트슛)");
+  else if (r.timingMs < -120) out.push("공이 점프보다 먼저 나감", "→ 다리 힘이 공에 안 실림");
+  else if (r.timingMs > 90) out.push("정점 지나서 릴리즈", "→ 내려오면서 쏘는 중");
+  else out.push("릴리즈 타이밍 좋음");
+  if (isFinite(r.dipCm) && r.dipCm < 8) out.push("무릎 로딩이 얕음");
+  if (isFinite(r.driftCm) && r.driftCm > 15) out.push("착지가 옆으로 밀림");
+  return out.slice(0, 3);
+}
+function finishShot(t) {
+  const s = S.shot; S.shot = null; S.lastShotT = t;
+  const made = s.netMax >= C.NET_MAKE;
+  const form = analyzeForm(s.tRel);
+  const rec = { n: s.n, made, auto: true, netMax: +s.netMax.toFixed(3), tRel: s.tRel, form, tips: feedback(form), path: s.path.map(p => ({ x: p.x / (S.pw / S.W), y: p.y / (S.pw / S.W) })) };
+  S.shots.push(rec);
+  S.banner = { text: made ? "SWISH!" : "MISS", col: made ? "#78e196" : "#ff5a5a", until: t + 1.6, n: rec.n };
+  console.log("[shot]", JSON.stringify({ n: rec.n, t: +s.tRel.toFixed(2), made, net: rec.netMax, exit: !!s.exitIn, timing: form && Math.round(form.timingMs), jump: form && Math.round(form.jumpCm), dip: form && Math.round(form.dipCm) }));
+  updateButtons(); saveShots();
+}
+function saveShots() { store.set("shots", S.shots.map(s => ({ n: s.n, made: s.made, form: s.form, tips: s.tips }))); }
+
+/* ============ drawing ============ */
+const COL = { navy: "rgba(14,18,46,0.88)", line: "#283264", cyan: "#5acdff", green: "#78e196", orange: "#ff8c3c", yellow: "#ffd640", red: "#ff5a5a", fg: "#ebf0ff", dim: "#7882aa" };
+const EDGES = [[5, 7], [7, 9], [6, 8], [8, 10], [5, 6], [5, 11], [6, 12], [11, 12], [11, 13], [13, 15], [12, 14], [14, 16]];
+function font(px, b) { return `${b ? 700 : 400} ${Math.round(px * S.k)}px Galmuri11, ui-monospace, monospace`; }
+function panel(x, y, w, h, accent) { g.fillStyle = COL.navy; g.fillRect(x, y, w, h); g.strokeStyle = COL.line; g.lineWidth = 2 * S.k; g.strokeRect(x, y, w, h); g.fillStyle = accent; g.fillRect(x, y, 5 * S.k, h); }
+function text(s, x, y, px, col, b, align) { g.font = font(px, b); g.fillStyle = col; g.textAlign = align || "left"; g.textBaseline = "top"; g.fillText(s, x, y); }
+function tag(s, x, y, col) { g.font = font(15, 1); const w = g.measureText(s).width + 18 * S.k, h = 26 * S.k; g.fillStyle = COL.navy; g.fillRect(x, y, w, h); g.fillStyle = col; g.fillRect(x, y, 4 * S.k, h); text(s, x + 11 * S.k, y + 5 * S.k, 15, col, 1); }
+function bar(x, y, w, h, f, col) { const n = 16, cw = w / n; for (let i = 0; i < n; i++) { g.fillStyle = i < Math.round(f * n) ? col : "#2d3764"; g.fillRect(x + i * cw, y, cw - 3 * S.k, h); } }
+const fmtT = ms => isFinite(ms) ? (ms >= 0 ? "+" : "") + (ms / 1000).toFixed(2) + "s" : "--";
+
+function draw(t) {
+  const W = S.W, H = S.H, k = S.k;
+  g.drawImage(video, 0, 0, W, H);
+  const done = S.shots, made = done.filter(s => s.made).length, last = done[done.length - 1];
+  // tiles
+  const tw = Math.min((W - 40 * k) / 3, 260 * k), th = 104 * k, ty = 58 * k + (H > W ? 30 * k : 0);
+  const tiles = [["SHOTS", `${made} / ${done.length}`, COL.orange], ["FG %", done.length ? Math.round(100 * made / done.length) + "" : "0", COL.cyan],
+                 ["RELEASE", last && last.form ? fmtT(last.form.timingMs) : "--", COL.yellow]];
+  tiles.forEach(([a, b, c], i) => { const x = 10 * k + i * (tw + 10 * k); panel(x, ty, tw, th, c); text(a, x + 16 * k, ty + 10 * k, 20, c, 1); text(b, x + 16 * k, ty + 44 * k, 42, COL.fg, 1); });
+  text("vs 점프정점", 10 * k + 2 * (tw + 10 * k) + tw - 10 * k, ty + 14 * k, 13, COL.dim, 0, "right");
+  // rim
+  if (S.rim) {
+    const r = S.rim; g.strokeStyle = "rgba(255,214,64,0.75)"; g.lineWidth = 3 * k;
+    g.beginPath(); g.ellipse(r.x, r.y, r.w / 2, r.w * 0.16, 0, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([6 * k, 6 * k]); g.strokeStyle = "rgba(255,214,64,0.35)"; g.strokeRect(r.x - r.w * 0.36, r.y + r.w * 0.22, r.w * 0.72, r.w * 0.73); g.setLineDash([]);
+    tag("RIM", r.x + r.w / 2 + 10 * k, r.y - 14 * k, COL.yellow);
+  }
+  for (const p of S.rimPick) { g.fillStyle = COL.yellow; g.fillRect(p.x - 7 * k, p.y - 7 * k, 14 * k, 14 * k); }
+  // ball trails
+  const sc = S.pw / S.W;
+  const drawPath = (pts, col) => { g.strokeStyle = col; g.lineWidth = 4 * k; g.setLineDash([10 * k, 8 * k]); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); g.setLineDash([]); };
+  if (S.shot) {
+    const pts = S.shot.track.pts.map(p => ({ x: p.x / sc, y: p.y / sc })); drawPath(pts, COL.yellow);
+    const p = pts[pts.length - 1], r = 26 * k, L = r * 0.55; g.strokeStyle = COL.yellow; g.lineWidth = 3 * k;
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) { g.beginPath(); g.moveTo(p.x + sx * r - sx * L, p.y + sy * r); g.lineTo(p.x + sx * r, p.y + sy * r); g.lineTo(p.x + sx * r, p.y + sy * r - sy * L); g.stroke(); }
+    tag("LOCK ON  BALL", p.x - 190 * k, p.y - 13 * k, COL.yellow);
+  } else if (S.banner && t < S.banner.until && last && last.path.length > 1) drawPath(last.path, S.banner.col);
+  // skeleton
+  if (S.kp) {
+    const kp = S.kp; g.strokeStyle = COL.cyan; g.lineWidth = 3.5 * k;
+    for (const [a, b] of EDGES) if (kp[a].s > 0.25 && kp[b].s > 0.25) { g.beginPath(); g.moveTo(kp[a].x, kp[a].y); g.lineTo(kp[b].x, kp[b].y); g.stroke(); }
+    for (let j = 5; j < 17; j++) if (kp[j].s > 0.25) { g.fillStyle = COL.fg; g.fillRect(kp[j].x - 4 * k, kp[j].y - 4 * k, 8 * k, 8 * k); }
+    if (kp[15].s > 0.25 && kp[16].s > 0.25) { const cx = (kp[15].x + kp[16].x) / 2, cy = Math.max(kp[15].y, kp[16].y) + 8 * k; g.beginPath(); g.ellipse(cx, cy, 60 * k, 12 * k, 0, 0, Math.PI * 2); g.stroke(); }
+    if (kp[0].s > 0.2) {
+      const bh = bodyHeight() || 150 * k;
+      let ev = null;
+      if (S.shot && t - S.shot.tRel < 0.35) ev = ["RELEASE", COL.yellow];
+      tag("SHOOTER", kp[0].x - 50 * k, kp[0].y - bh * 0.45 - 30 * k, COL.cyan);
+      if (ev) tag(ev[0], kp[0].x + 40 * k, kp[0].y - bh * 0.45 + 4 * k, ev[1]);
+    }
+  }
+  // banner
+  if (S.banner && t < S.banner.until && S.rim) {
+    const b = S.banner, on = ((S.banner.until - t) * 6 | 0) % 2 === 0 || S.banner.until - t < 1.1;
+    g.font = font(52, 1); const w = g.measureText(b.text).width + 40 * k, x = S.rim.x - w / 2, y = S.rim.y + S.rim.w * 1.5;
+    if (on) { g.fillStyle = COL.navy; g.fillRect(x, y, w, 78 * k); g.strokeStyle = b.col; g.lineWidth = 4 * k; g.strokeRect(x, y, w, 78 * k); text(b.text, x + 20 * k, y + 12 * k, 52, b.col, 1); }
+    text(`#${b.n}  ${made}/${done.length}`, x + 4 * k, y + 86 * k, 17, COL.fg, 1);
+  }
+  // bottom card
+  const pw = Math.min(W - 20 * k, 560 * k), ph = 230 * k, px = 10 * k, py = H - ph - 80 * k;
+  panel(px, py, pw, ph, COL.cyan);
+  if (!S.rim) { text("림 왼쪽 끝 → 오른쪽 끝을 탭하세요", px + 18 * k, py + 20 * k, 20, COL.yellow, 1); text("그다음 쏘면 자동으로 잡아요", px + 18 * k, py + 56 * k, 17, COL.dim); }
+  else if (!last) { text("SHOT FORM", px + 18 * k, py + 14 * k, 22, COL.cyan, 1); text(S.shot ? "슛 추적 중..." : "첫 슛 기다리는 중", px + 18 * k, py + 56 * k, 19, COL.dim); }
+  else {
+    const f = last.form || {};
+    text(`SHOT #${last.n}`, px + 18 * k, py + 12 * k, 22, COL.cyan, 1);
+    text(last.made ? "MAKE" : "MISS", px + 150 * k, py + 12 * k, 22, last.made ? COL.green : COL.red, 1);
+    const rows = [["릴리즈 타이밍", fmtT(f.timingMs), isFinite(f.timingMs) ? Math.min(1, Math.abs(f.timingMs) / 300) : 0, isFinite(f.timingMs) && Math.abs(f.timingMs) > 120 ? COL.red : COL.green],
+                  ["무릎 로딩", isFinite(f.dipCm) ? Math.round(f.dipCm) + "cm" : "--", isFinite(f.dipCm) ? Math.min(1, f.dipCm / 30) : 0, COL.orange],
+                  ["점프 높이", isFinite(f.jumpCm) ? "~" + Math.round(f.jumpCm) + "cm" : "--", isFinite(f.jumpCm) ? Math.min(1, f.jumpCm / 50) : 0, COL.cyan]];
+    const colW = Math.min(300 * k, pw * 0.55);
+    rows.forEach(([a, b, fr, c], i) => { const y = py + 50 * k + i * 56 * k; text(a, px + 18 * k, y, 17, COL.fg); text(b, px + 18 * k + colW - 14 * k, y, 18, c, 1, "right"); bar(px + 18 * k, y + 27 * k, colW - 30 * k, 11 * k, fr, c); });
+    const tx = px + 18 * k + colW + 4 * k;
+    if (pw - colW > 150 * k) last.tips.forEach((s, i) => text(s, tx, py + 52 * k + i * 30 * k, 15, i === 0 ? COL.yellow : COL.fg, i === 0));
+    // shot log squares
+    const n = Math.min(done.length, 12), start = done.length - n;
+    for (let i = 0; i < n; i++) { const s = done[start + i], x = px + 18 * k + i * 30 * k, y = py + ph - 40 * k; g.fillStyle = s.made ? COL.green : COL.red; g.fillRect(x, y, 24 * k, 24 * k); text(s.made ? "O" : "X", x + 12 * k, y + 4 * k, 15, "#0e122e", 1, "center"); }
+  }
+  if (S.debugOn) text(`net ${S.debug.net.toFixed(3)}  tracks ${S.tracks.length}  ${S.fps.toFixed(0)}fps`, 12 * k, H - 40 * k, 14, COL.dim);
+}
+
+/* ============ loop ============ */
+let lastFrameT = -1, fpsN = 0, fpsT = 0;
+async function frame() {
+  if (!S.running) return;
+  const t = now();
+  if (video.readyState >= 2 && t !== lastFrameT) {
+    lastFrameT = t;
+    motionStep(t);
+    if (!S.busy && !window.SHOT_NOPOSE) { S.busy = true; runPose(t).catch(e => console.warn(e)).finally(() => S.busy = false); }
+    draw(t);
+    fpsN++; if (t - fpsT > 1) { S.fps = fpsN / (t - fpsT); fpsN = 0; fpsT = t; }
+  }
+  if (S.src === "file" && video.ended) { S.running = false; toast(`영상 끝 · ${S.shots.filter(s => s.made).length}/${S.shots.length}`, 0); console.log("[done]", JSON.stringify(S.shots.map(s => ({ n: s.n, made: s.made, t: +s.tRel.toFixed(2) })))); return; }
+  if (video.requestVideoFrameCallback && S.src === "file") video.requestVideoFrameCallback(frame); else requestAnimationFrame(frame);
+}
+
+function sizeCanvas() {
+  S.W = video.videoWidth; S.H = video.videoHeight; S.k = Math.min(S.W, S.H) / 720 * (S.W > S.H ? 0.9 : 1);
+  hud.width = S.W; hud.height = S.H; setupProc();
+}
+async function begin(src) {
+  $("#err").textContent = "";
+  S.heightCm = +$("#hInit").value || 175; store.set("height", S.heightCm); $("#sHeight").value = S.heightCm;
+  try {
+    if (!S.model) { toast("AI 모델 불러오는 중...", 0); S.model = await loadModel(S.modelType); }
+  } catch (e) { $("#err").textContent = "모델을 못 불러왔어요. 인터넷 연결을 확인해 주세요."; console.error(e); return; }
+  try {
+    if (src === "cam") {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } });
+      video.srcObject = stream; S.src = "cam";
+      try { await navigator.wakeLock?.request("screen"); } catch {}
+    } else { S.src = "file"; }
+    if (window.SHOT_RATE) video.playbackRate = window.SHOT_RATE;
+    await video.play();
+  } catch (e) { $("#err").textContent = src === "cam" ? "카메라를 열 수 없어요. 브라우저에서 카메라 권한을 허용해 주세요 (https 주소에서만 됩니다)." : "영상을 재생할 수 없어요."; console.error(e); $("#toast").hidden = true; return; }
+  await new Promise(r => video.readyState >= 1 ? r() : video.onloadedmetadata = r);
+  sizeCanvas();
+  const saved = store.get("rim:" + S.W + "x" + S.H, null);
+  if (saved && src === "cam") S.rim = saved; else { S.rim = null; startRimPick(); }
+  if (window.SHOT_RIM) S.rim = window.SHOT_RIM;
+  $("#sheet").hidden = true; $("#top").hidden = false; $("#bottom").hidden = false;
+  $("#toast").hidden = true; S.running = true; fpsT = now(); frame();
+  if (!S.rim) toast("림 왼쪽 끝을 탭하세요", 3000);
+}
+function startRimPick() { S.picking = true; S.rimPick = []; S.rim = null; S.tracks = []; S.shot = null; }
+function clientToVideo(ev) {
+  const r = hud.getBoundingClientRect(), s = Math.min(r.width / S.W, r.height / S.H);
+  const ox = r.left + (r.width - S.W * s) / 2, oy = r.top + (r.height - S.H * s) / 2;
+  return { x: (ev.clientX - ox) / s, y: (ev.clientY - oy) / s };
+}
+hud.addEventListener("pointerdown", ev => {
+  if (!S.picking) return;
+  const p = clientToVideo(ev); if (p.x < 0 || p.y < 0 || p.x > S.W || p.y > S.H) return;
+  S.rimPick.push(p);
+  if (S.rimPick.length === 1) toast("이제 림 오른쪽 끝을 탭하세요", 3000);
+  if (S.rimPick.length === 2) {
+    const [a, b] = S.rimPick; S.rim = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w: Math.abs(b.x - a.x) };
+    S.picking = false; S.rimPick = [];
+    if (S.rim.w < 12) { toast("너무 좁아요. 다시 탭해 주세요"); startRimPick(); return; }
+    store.set("rim:" + S.W + "x" + S.H, S.rim); toast("림 설정 완료! 이제 쏘세요");
+  }
+});
+
+/* ============ controls ============ */
+function updateButtons() { const has = S.shots.length > 0; ["#bMake", "#bMiss", "#bUndo"].forEach(id => $(id).disabled = !has); }
+$("#bCam").onclick = () => begin("cam");
+$("#fileIn").onchange = e => { const f = e.target.files[0]; if (!f) return; video.src = URL.createObjectURL(f); begin("file"); };
+$("#bRim").onclick = () => { startRimPick(); toast("림 왼쪽 끝을 탭하세요", 3000); };
+$("#bMake").onclick = () => fix(true); $("#bMiss").onclick = () => fix(false);
+$("#bUndo").onclick = () => { S.shots.pop(); updateButtons(); saveShots(); toast("마지막 슛 삭제"); };
+function fix(made) { const s = S.shots[S.shots.length - 1]; if (!s) return; s.made = made; s.auto = false; saveShots(); toast(`#${s.n} → ${made ? "성공" : "실패"}로 수정`); }
+$("#bSet").onclick = () => { $("#settings").hidden = false; };
+$("#bClose").onclick = async () => {
+  $("#settings").hidden = true;
+  S.heightCm = +$("#sHeight").value || 175; store.set("height", S.heightCm);
+  C.NET_MAKE = +$("#sNet").value || 0.40; store.set("net2", C.NET_MAKE);
+  const m = $("#sModel").value; if (m !== S.modelType) { S.modelType = m; store.set("model", m); toast("모델 바꾸는 중...", 0); S.model = await loadModel(m); S.crop = null; toast("완료"); }
+};
+$("#bReset").onclick = () => { S.shots = []; saveShots(); updateButtons(); toast("기록 초기화"); };
+$("#sModel").value = S.modelType; $("#sNet").value = C.NET_MAKE; $("#hInit").value = S.heightCm; $("#sHeight").value = S.heightCm;
+// recording (canvas with HUD)
+let rec = null, chunks = [];
+$("#bRec").onclick = () => {
+  if (rec) { rec.stop(); return; }
+  if (!window.MediaRecorder || !hud.captureStream) { toast("이 브라우저는 녹화를 지원하지 않아요"); return; }
+  const type = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"].find(t => MediaRecorder.isTypeSupported(t)) || "";
+  rec = new MediaRecorder(hud.captureStream(30), type ? { mimeType: type, videoBitsPerSecond: 6e6 } : {}); chunks = [];
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    const blob = new Blob(chunks, { type: rec.mimeType }); rec = null; $("#bRec").classList.remove("on"); $("#bRec").textContent = "● 녹화";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "shot-" + new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-") + (blob.type.includes("mp4") ? ".mp4" : ".webm");
+    document.body.appendChild(a); a.click(); a.remove(); toast("녹화 저장됨");
+  };
+  rec.start(1000); $("#bRec").classList.add("on"); $("#bRec").textContent = "■ 정지";
+};
+S.debugOn = /debug/.test(location.hash);
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+if (window.claude && window.claude.use) { $("#bRec").hidden = true; }
+window.__S = S; window.__C = C;
+</script>
+</body>
+</html>
