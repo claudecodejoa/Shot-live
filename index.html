@@ -97,7 +97,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .chip.warn{border-color:var(--orange);background:var(--warn-bg)}.chip.warn b{color:var(--orange)}.chip.warn span{color:var(--warn-fg)}
 .chip.na,.chip.wait{border:1px dashed var(--line2);background:transparent}.chip.na b,.chip.wait b,.chip.na span,.chip.wait span{color:var(--dim)}
 #bMore{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;border:0;border-top:1px solid var(--line);background:none;color:var(--cyan);font-size:15px;font-weight:500}
-#card.compact .chips,#card.compact #cFix{display:none}
+#card.compact .chips,#card.compact #cFix,#card.compact #cGauge{display:none}
+#cGauge:empty{display:none}
+#cGauge .gauge{font-size:13px;grid-template-columns:5em minmax(0,1fr) 6.4em}
 /* --- 4 detail / menu sheets --- */
 .scrim{position:fixed;inset:0;z-index:10;background:rgba(4,6,14,.62);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:560px;max-height:88vh;overflow:auto;display:flex;flex-direction:column;gap:12px;background:var(--panel);border-top:1px solid var(--line);border-radius:22px 22px 0 0;
@@ -217,6 +219,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 <section id="card" hidden aria-label="방금 슛 피드백">
   <div class="head"><span style="display:flex;align-items:center;gap:10px"><span class="n" id="cN">SHOT FORM</span><span class="res" id="cRes"></span></span><button class="voice" id="cVoice" type="button" aria-pressed="true" aria-label="음성 안내 끄기"><svg class="ico s"><use href="#i-sound"/></svg><span>음성 켜짐</span></button></div>
   <div style="display:grid;gap:4px"><p id="cMain" aria-live="polite">첫 슛 기다리는 중</p><p id="cFix">머리부터 발끝까지 보이게 서서 쏘세요</p></div>
+  <div id="cGauge"></div>
   <div class="chips" id="chips"></div>
   <button id="bMore" type="button" hidden>자세히 보기<svg class="ico s"><use href="#i-chev"/></svg></button>
 </section>
@@ -864,6 +867,8 @@ function gradeShot(rec, hist) {
       : { main: "좋아요! 기준을 모두 지켰어요", fix: good, key: "good", kind: "good" };
   }
   line.kind = line.kind || "warn";
+  line.gk = line.key !== "good" ? line.key : rec.made === false ? (front ? "lat" : "depth")      // gauge shown under the line on the card
+    : items.cons.state === "ok" ? "cons" : items.lat.state === "ok" ? "lat" : items.arc.state === "ok" ? "arc" : "legs";
   return { items, line };
 }
 // release when the ball track can't tell (it began after the ball left the hands, or followed the hands):
@@ -1127,11 +1132,19 @@ function renderScore() {
   else { $("#scBig").textContent = String(sh.length); $("#scSub").textContent = S.shot ? "슛 추적 중" : sh.length ? "슛 · 폼 분석" : "첫 슛 기다리는 중"; }
 }
 function fixHtml(fix) { const i = fix.lastIndexOf(" · "); return i < 0 ? esc(fix) : `<span class="why">${esc(fix.slice(0, i))} · </span>${esc(fix.slice(i + 3))}`; }
+const gpct = (v, g) => Math.max(0, Math.min(100, (v - g.lo) / (g.hi - g.lo) * 100));
+function gaugeHtml(g, neutral) {
+  const pct = gpct;
+  return `<div class="gauge${neutral ? " neutral" : ""}"><span>${esc(g.label)}</span><div class="gt" role="img" aria-label="${esc(g.label)} ${esc(g.txt)}">`
+    + (neutral ? "" : `<i class="band" style="left:${pct(g.a, g)}%;width:${pct(g.b, g) - pct(g.a, g)}%"></i>`)
+    + (g.b2 ? `<i class="band b2" style="left:${pct(g.b2[0], g)}%;width:${pct(g.b2[1], g) - pct(g.b2[0], g)}%"></i>` : "")
+    + `<i class="mk${g.bad ? " bad" : ""}" style="left:${pct(g.v, g)}%"></i></div><b>${esc(g.txt)}</b></div>`;
+}
 function renderCard(rec) {
   if (!rec) {
     $("#cN").textContent = "SHOT FORM"; $("#cRes").innerHTML = ""; $("#cMain").textContent = "첫 슛 기다리는 중";
     $("#cFix").textContent = S.judge ? "머리부터 발끝까지 보이게 서서 쏘세요" : "폼만 분석해요 · 림을 지정하면 성공률도 기록";
-    $("#chips").innerHTML = ""; $("#bMore").hidden = true; return;
+    $("#chips").innerHTML = ""; $("#cGauge").innerHTML = ""; $("#bMore").hidden = true; return;
   }
   $("#cN").textContent = `SHOT #${rec.n}`; $("#cRes").innerHTML = resTag(rec.made);
   $("#cMain").textContent = rec.line.main; $("#cFix").innerHTML = fixHtml(rec.line.fix);
@@ -1140,6 +1153,8 @@ function renderCard(rec) {
     const ic = it.state === "ok" ? ICO("i-check") : it.state === "warn" ? ICO("i-bang") : "";
     return `<div class="chip ${it.state}"><b>${ic}${label}</b><span>${esc(it.chip)}</span></div>`;
   }).join("");
+  const it = rec.items[rec.line.gk], gs = it && it.gs || [], g = gs.find(x => x.bad) || gs[0];
+  $("#cGauge").innerHTML = g ? gaugeHtml(g) : "";
   $("#bMore").hidden = false; $("#card").classList.remove("compact");
   clearTimeout(S.compactT); S.compactT = setTimeout(() => { if (S.shots[S.shots.length - 1] === rec) $("#card").classList.add("compact"); }, 8000);  // keep the shooter's feet visible
 }
@@ -1155,11 +1170,7 @@ function openDetail(rec) {
   const its = ROW_ORDER.map(k => rec.items[k]).filter(Boolean).sort((a, b) => rank[a.state] - rank[b.state] || ROW_ORDER.indexOf(a.key) - ROW_ORDER.indexOf(b.key));
   const icon = st => st === "ok" ? `<svg class="ico" style="color:var(--green)"><use href="#i-ok-c"/></svg>` : st === "warn" ? `<svg class="ico" style="color:var(--orange)"><use href="#i-warn-c"/></svg>` : `<svg class="ico" style="color:#6b75a3"><use href="#i-na-c"/></svg>`;
   const m = rec.m || {};
-  const pct = (v, g) => Math.max(0, Math.min(100, (v - g.lo) / (g.hi - g.lo) * 100));
-  const gauge = (g, neutral) => `<div class="gauge${neutral ? " neutral" : ""}"><span>${esc(g.label)}</span><div class="gt" role="img" aria-label="${esc(g.label)} ${esc(g.txt)}">`
-    + (neutral ? "" : `<i class="band" style="left:${pct(g.a, g)}%;width:${pct(g.b, g) - pct(g.a, g)}%"></i>`)
-    + (g.b2 ? `<i class="band b2" style="left:${pct(g.b2[0], g)}%;width:${pct(g.b2[1], g) - pct(g.b2[0], g)}%"></i>` : "")
-    + `<i class="mk${g.bad ? " bad" : ""}" style="left:${pct(g.v, g)}%"></i></div><b>${esc(g.txt)}</b></div>`;
+  const gauge = gaugeHtml;
   const styleGs = [isFinite(m.jumpCm) ? { label: "점프", v: m.jumpCm, lo: 0, hi: 60, txt: `~${Math.round(m.jumpCm)}cm` } : null, isFinite(m.elbowExt) && m.view === "side" ? { label: "팔꿈치", v: m.elbowExt, lo: 90, hi: 180, txt: `${Math.round(m.elbowExt)}°` } : null].filter(Boolean);
   $("#dRows").innerHTML = its.map(it => `<div class="rowi ${it.state}">${icon(it.state)}<div><strong>${esc(it.label)}</strong><span class="v">${esc(it.value)}</span></div><span class="r">${esc(it.ref)}</span>${it.gs && it.gs.length ? `<div class="gs">${it.gs.map(g => gauge(g)).join("")}</div>` : ""}</div>`).join("")
     + (styleGs.length ? `<div class="rowi na">${icon("na")}<div><strong>참고 (평가 안 함)</strong><span class="v">사람마다 달라요</span></div><span class="r"></span><div class="gs">${styleGs.map(g => gauge(g, true)).join("")}</div></div>` : "");
@@ -1185,8 +1196,8 @@ function speak(txt) {
 }
 function announce(rec) {
   vibrate(rec.made === true ? [60] : rec.made === false ? [30, 70, 30] : [40]);
-  const fix = rec.line.fix.split(" · ").pop(), res = rec.made === true ? "성공. " : rec.made === false ? "실패. " : "";
-  speak(res + rec.line.main + ". " + (rec.line.kind === "good" ? "" : fix));
+  const fix = rec.line.fix.split(" · ").pop();          // make/miss is on screen and in the vibration; voice says only the feedback
+  speak(rec.line.main + ". " + (rec.line.kind === "good" ? "" : fix));
 }
 function setVoice(on) {
   S.voice = on; store.set("voice", on);
