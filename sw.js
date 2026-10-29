@@ -1,5 +1,5 @@
 // 슛폼 라이브 service worker: app shell network-first, heavy assets cache-first (works offline at the court)
-const VERSION = "shotlive-v3";
+const VERSION = "shotlive-v4";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 const HEAVY = ["vendor/tf.min.js", "models/movenet-thunder.json", "models/movenet-thunder.bin",
   "models/movenet-lightning.json", "models/movenet-lightning.bin", "fonts/Galmuri11.woff2", "fonts/Galmuri11-Bold.woff2"];
