@@ -36,9 +36,12 @@ button,.btn{font:700 15px var(--px);color:var(--fg);background:var(--panel);bord
   padding:10px 14px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 button:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 button.on{border-color:var(--red);color:var(--red)}
+button.lock{border-color:var(--cyan);color:var(--cyan)}
 button.ok{border-color:var(--green);color:var(--green)}
 button.ng{border-color:var(--red);color:var(--red)}
 button[disabled]{opacity:.35}
+label.field input[type=checkbox]{width:26px;height:26px;accent-color:var(--yellow);flex:none}
+.field small{display:block;color:var(--dim);font-size:12px;font-weight:400}
 #toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:9;background:var(--panel);border:2px solid var(--yellow);
   color:var(--yellow);padding:14px 18px;font:700 16px var(--px);text-align:center;max-width:88vw;pointer-events:none}
 /* start sheet */
@@ -54,6 +57,7 @@ button[disabled]{opacity:.35}
 .big{background:var(--yellow);color:#0e122e;border-color:var(--yellow);font-size:17px;min-height:54px}
 label.field{display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--line);padding:8px 12px;background:var(--panel)}
 label.field input,label.field select{font:700 16px var(--px);background:transparent;color:var(--fg);border:0;text-align:right;width:7em}
+label.field select{width:auto;max-width:60%}
 label.field select option{background:#0e122e}
 #err{color:var(--red);min-height:1.4em}
 #settings{position:fixed;inset:auto 0 0 0;z-index:8;background:var(--panel);border-top:2px solid var(--line);display:grid;gap:10px;
@@ -69,7 +73,8 @@ label.field select option{background:#0e122e}
 </div>
 
 <div class="bar" id="top" hidden>
-  <button id="bRim" type="button">◎ 림 설정</button>
+  <button id="bRim" type="button">◎ 림</button>
+  <button id="bShooter" type="button">👤 슈터</button>
   <button id="bRec" type="button">● 녹화</button>
   <button id="bSet" type="button">⚙</button>
 </div>
@@ -85,7 +90,9 @@ label.field select option{background:#0e122e}
   <label class="field">키 (cm) <input id="sHeight" type="number" min="120" max="230" value="175"></label>
   <label class="field">모델
     <select id="sModel"><option value="thunder">정확 (Thunder)</option><option value="lightning">빠름 (Lightning)</option></select></label>
-  <label class="field">성공 판정 민감도 <input id="sNet" type="number" step="0.01" min="0.1" max="0.9" value="0.40"></label>
+  <label class="field"><span>성공/실패 판정<small>끄면 림 없이 폼만 분석</small></span><input id="sJudge" type="checkbox"></label>
+  <label class="field"><span>슈터 고정<small>탭한 사람만 따라가기 (여러 명 있을 때)</small></span><input id="sLock" type="checkbox"></label>
+  <label class="field">성공 판정 민감도 <input id="sNet" type="number" step="0.01" min="0.1" max="0.9" value="0.34"></label>
   <div class="row"><button id="bReset" type="button" class="ng">기록 초기화</button><button id="bClose" type="button">닫기</button></div>
 </div>
 
@@ -94,11 +101,13 @@ label.field select option{background:#0e122e}
     <h1>SHOT FORM LIVE</h1>
     <p>폰 카메라로 슛을 비추면 관절, 공 궤적, 성공/실패, 릴리즈 타이밍이 바로 뜹니다. 분석은 전부 이 폰 안에서 돌아가요.</p>
     <ol>
-      <li>폰을 <b>삼각대에 고정</b>하고 림과 슈터가 한 화면에 다 나오게</li>
-      <li>시작 후 화면에서 <b>림 왼쪽 끝 → 오른쪽 끝</b>을 차례로 탭</li>
-      <li>쏘면 끝. 판정이 틀리면 아래 버튼으로 고치기</li>
+      <li>폰을 <b>삼각대에 고정</b>하고 슈터 전신이 나오게 (판정을 켜면 림도 같이)</li>
+      <li>판정 켜면 시작 후 <b>림 왼쪽 끝 → 오른쪽 끝</b>을 탭</li>
+      <li>사람이 여럿이면 <b>👤 슈터</b> 누르고 슈터를 탭</li>
     </ol>
     <label class="field">키 (cm) <input id="hInit" type="number" min="120" max="230" value="175"></label>
+    <label class="field"><span>성공/실패 판정<small>림이 안 나오는 각도면 끄기 (폼만 분석)</small></span><input id="hJudge" type="checkbox"></label>
+    <label class="field"><span>슈터 탭해서 고정<small>시작 후 슈터를 탭</small></span><input id="hLock" type="checkbox"></label>
     <div class="row">
       <button id="bCam" type="button" class="big">카메라로 시작</button>
       <label class="btn" for="fileIn">영상 파일로 테스트</label>
@@ -115,7 +124,7 @@ label.field select option{background:#0e122e}
 /* ============ config ============ */
 const MODEL_BASES = window.SHOT_MODEL_BASE ? [window.SHOT_MODEL_BASE] : ["models/", "https://cdn.jsdelivr.net/npm/@vladmandic/human-models@3.0.4/models/"];
 const C = { // tunables (proc = motion analysis resolution)
-  PROC_W: 270, DIFF: 22, NET_MAKE: 0.40, NET_EXIT: 0.20,
+  PROC_W: 270, DIFF: 22, NET_MAKE: 0.34, NET_EXIT: 0.20,
   BALL_MIN: 0.12, BALL_MAX: 0.8,       // ball diameter, in rim widths
   RISE_MIN: 1.4,                        // upward travel (rim widths) before a track counts as a shot
   COOLDOWN: 1.5, FLIGHT_MAX: 1.8, JUDGE: 1.4,
@@ -132,8 +141,9 @@ const S = {
   prevGray: null, pw: 0, ph: 0, pctx: null,
   tracks: [], nextId: 1, shot: null, lastShotT: -99,
   shots: [], banner: null, debug: { net: 0 }, fps: 0,
+  judge: store.get("judge", true), lockOn: store.get("lock", false), shooter: null, pickingShooter: false,
 };
-C.NET_MAKE = store.get("net2", C.NET_MAKE);
+C.NET_MAKE = store.get("net3", C.NET_MAKE);
 const t0 = performance.now();
 const now = () => (S.src === "file" ? video.currentTime : (performance.now() - t0) / 1000);
 
@@ -141,8 +151,9 @@ function toast(msg, ms = 2200) { const el = $("#toast"); el.textContent = msg; e
 
 /* ============ model ============ */
 async function loadModel(type) {
+  if (window.SHOT_BACKEND_SRC) await new Promise((ok, no) => { const sc = document.createElement("script"); sc.src = window.SHOT_BACKEND_SRC; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });  // test hook
   await tf.ready();
-  try { await tf.setBackend("webgl"); } catch {}
+  try { await tf.setBackend(window.SHOT_BACKEND || "webgl"); } catch {}
   let m = null, err;
   for (const base of MODEL_BASES) { try { m = await tf.loadGraphModel(base + "movenet-" + type + ".json"); break; } catch (e) { err = e; } }
   if (!m) throw err;
@@ -165,14 +176,26 @@ async function runPose(frameT) {
   const kp = [];
   for (let i = 0; i < 17; i++) kp.push({ x: (c.cx - c.s / 2) + d[i * 3 + 1] * c.s, y: (c.cy - c.s / 2) + d[i * 3] * c.s, s: d[i * 3 + 2] });
   const good = kp.filter(p => p.s > 0.25);
-  if (good.length < 7) { S.crop = null; S.kp = null; return; }
+  const lost = () => {  // locked: search again around the shooter's last spot, never jump to someone else
+    if (S.lockOn && S.shooter) {  // widen the search the longer the shooter is missing
+      const sh = S.shooter; S.lostN = (S.lostN || 0) + 1; sh.s = Math.min(Math.min(W, H), sh.s * 1.06);
+      S.crop = { cx: sh.x, cy: sh.y, s: sh.s };
+    }
+    else S.crop = null;
+    S.kp = null;
+  };
+  if (good.length < 7) { lost(); return; }
   const xs = good.map(p => p.x), ys = good.map(p => p.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  const h = Math.max(y1 - y0, x1 - x0);
-  S.crop = { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, s: Math.max(h * 1.6, Math.min(W, H) * 0.18) };
+  const h = Math.max(y1 - y0, x1 - x0), bx = (x0 + x1) / 2, by = (y0 + y1) / 2;
+  if (S.lockOn && S.shooter && S.shooter.h && Math.hypot(bx - S.shooter.x, by - S.shooter.y) > Math.max(S.shooter.h * 0.9, Math.min(W, H) * 0.08) + (S.lostN || 0) * Math.min(W, H) * 0.02) { lost(); return; }  // someone else
+  S.lostN = 0;
+  S.crop = { cx: bx, cy: by, s: Math.max(h * 1.6, Math.min(W, H) * 0.18) };
+  if (S.lockOn) S.shooter = { x: bx, y: by, s: S.crop.s, h };
   // light smoothing for display
   if (S.kp) for (let i = 0; i < 17; i++) { if (kp[i].s > 0.25 && S.kp[i].s > 0.25) { kp[i].x = kp[i].x * 0.65 + S.kp[i].x * 0.35; kp[i].y = kp[i].y * 0.65 + S.kp[i].y * 0.35; } }
   S.kp = kp;
+  if (kp[0].s > 0.2) S.lastHead = { x: kp[0].x, y: kp[0].y, t: frameT };
   S.poseHist.push({ t: frameT, kp });
   while (S.poseHist.length && S.poseHist[0].t < frameT - 4) S.poseHist.shift();
 }
@@ -209,7 +232,9 @@ function blobs(mask, w, x0, y0, x1, y1) {
 function motionStep(t) {
   const gray = grabGray();
   const prev = S.prevGray; S.prevGray = gray;
-  if (!prev || !S.rim) return;
+  if (!prev) return;
+  if (!S.judge) return motionFree(t, gray, prev);
+  if (!S.rim) return;
   const sc = S.pw / S.W, w = S.pw, rim = { x: S.rim.x * sc, y: S.rim.y * sc, w: S.rim.w * sc };
   const mask = new Uint8Array(gray.length);
   let moved = 0;
@@ -224,44 +249,31 @@ function motionStep(t) {
   const net = tot ? cnt / tot : 0; S.debug.net = net;
   // 2) ball candidates in flight corridor
   let headY = S.ph * 0.8, sx = rim.x;
-  if (S.kp && S.kp[0].s > 0.2) { headY = S.kp[0].y * sc; sx = S.kp[0].x * sc; }
+  const head = headNow(t);
+  if (head) { headY = head.y * sc; sx = head.x * sc; }
   const x0 = Math.max(0, Math.round(Math.min(rim.x, sx) - rim.w * 2.2)), x1 = Math.min(w, Math.round(Math.max(rim.x, sx) + rim.w * 2.2));
-  const y0 = Math.max(0, Math.round(rim.y - rim.w * 1.5)), y1 = Math.min(S.ph, Math.round(headY + rim.w * 0.2));
-  const dmin = rim.w * C.BALL_MIN, dmax = rim.w * C.BALL_MAX;
+  const y0 = 0, y1 = Math.min(S.ph, Math.round(headY + rim.w * 0.2));  // whole sky: a low camera sees the ball above the rim the entire flight
+  const bhP = (bodyHeight() || 0) * sc;  // camera may be much closer to the shooter than to the rim
+  const dmin = rim.w * C.BALL_MIN, dmax = Math.max(rim.w * C.BALL_MAX, bhP * 0.45), gate = Math.max(rim.w * 0.9, bhP * 0.35);
   const cands = blobs(mask, w, x0, y0, x1, y1).filter(b => {
     const d = Math.max(b.bw, b.bh * 0.75);
     return d >= dmin && d <= dmax && b.bw / b.bh > 0.35 && b.bw / b.bh < 2.6 && b.a > 0.3 * b.bw * b.bh;
   });
+  if (window.SHOT_DEBUG) console.log("[dbg]", t.toFixed(2), "head", headY.toFixed(0), sx.toFixed(0), "bh", bhP.toFixed(0), "dmax", dmax.toFixed(0), "kp", S.kp ? S.kp[0].s.toFixed(2) : "-", "c", JSON.stringify(cands.map(c => [c.x | 0, c.y | 0, c.bw, c.bh])), "tr", JSON.stringify(S.tracks.filter(tr => tr.pts.length > 1).map(tr => tr.pts.map(p => [p.x | 0, p.y | 0]))));
   // 3) tracking
-  for (const tr of S.tracks) tr.hit = false;
-  for (const b of cands) {
-    let best = null, bd = 1e9;
-    for (const tr of S.tracks) {
-      const p = tr.pts[tr.pts.length - 1], dt = t - p.t; if (dt <= 0 || dt > 0.2) continue;
-      const px = p.x + tr.vx * dt, py = p.y + tr.vy * dt;
-      const dd = Math.hypot(b.x - px, b.y - py);
-      if (dd < rim.w * 0.9 && dd < bd) { bd = dd; best = tr; }
-    }
-    if (best && !best.hit) {
-      const p = best.pts[best.pts.length - 1], dt = t - p.t;
-      best.vx = (b.x - p.x) / dt; best.vy = (b.y - p.y) / dt; best.pts.push({ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) }); best.hit = true;
-    } else if (b.y < headY - rim.w * 0.1 && !(Math.abs(b.x - rim.x) < rim.w * 0.7 && b.y < rim.y + rim.w * 1.2)) {
-      S.tracks.push({ id: S.nextId++, pts: [{ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) }], vx: 0, vy: -rim.w * 6, hit: true });
-    }
-  }
-  S.tracks = S.tracks.filter(tr => t - tr.pts[tr.pts.length - 1].t < 0.25 && tr.pts.length < 80);
+  assignTracks(cands, t, gate, b => b.y < headY - rim.w * 0.1 && !(Math.abs(b.x - rim.x) < rim.w * 0.7 && b.y < rim.y + rim.w * 1.2), -rim.w * 6);
   // 4) shot state machine
   if (!S.shot) {
     for (const tr of S.tracks) {
-      const p = tr.pts; if (p.length < 4) continue;
+      const p = flightPart(tr); if (p.length < 4) continue;
       const rise = (p[0].y - p[p.length - 1].y) / rim.w;
       let mono = 0; for (let i = 1; i < p.length; i++) if (p[i].y < p[i - 1].y) mono++;
       if (!(rise > C.RISE_MIN && mono >= p.length - 2 && t - S.lastShotT > C.COOLDOWN)) continue;
-      if (!S.kp || S.kp[0].s < 0.2) continue;                       // no shooter in view
+      if (!head) continue;                                            // no shooter in view (recently)
       const bh = (bodyHeight() || 0) * sc; if (!bh) continue;
       if (Math.abs(p[0].x - sx) > bh * 0.9 || p[0].y > headY + bh * 0.1 || p[0].y < headY - bh * 1.6) continue; // ball must leave from the shooter
       if (bh > rim.w * 4.5) continue;                                 // person too close to the camera
-      startShot(tr, t, headY, rim); break;
+      startShot(tr, t, headY, rim, p); break;
     }
   } else {
     const s = S.shot;
@@ -270,26 +282,107 @@ function motionStep(t) {
       const ey0 = Math.round(rim.y + rim.w * 0.95), ey1 = Math.min(S.ph, Math.round(rim.y + rim.w * 2.4));
       if (ey0 < ey1 && blobs(mask, w, ex0, ey0, ex1, ey1).some(b => { const d = Math.max(b.bw, b.bh * 0.75); return d >= dmin && d <= dmax && b.a > 0.3 * b.bw * b.bh; })) s.exitIn = true;
     }
+    if (s.phase === "flight") followTrack(s.track, mask, w, t, sc);
     updateShot(t, net, rim);
   }
 }
-function startShot(tr, t, headYp, rim) {
-  const p = tr.pts, a = p[0], b = p[Math.min(2, p.length - 1)];
+// shot detection without a rim: everything is scaled by the shooter's body height
+function motionFree(t, gray, prev) {
+  const sc = S.pw / S.W, w = S.pw;
+  const mask = new Uint8Array(gray.length);
+  let moved = 0;
+  for (let i = 0; i < gray.length; i++) { const v = Math.abs(gray[i] - prev[i]) > C.DIFF ? 1 : 0; mask[i] = v; moved += v; }
+  if (moved / gray.length > 0.12) { S.tracks = []; S.camMoveUntil = t + 0.6; return; }
+  if (t < (S.camMoveUntil || 0)) { S.tracks = []; return; }
+  if (S.shot) { if (t - S.shot.tStart > 0.9) finishShot(t); else followTrack(S.shot.track, mask, w, t, sc); return; }
+  const head = headNow(t); if (!head) return;
+  if (S.kp) { const core = [5, 6, 11, 12, 15, 16].reduce((a, i) => a + S.kp[i].s, 0) / 6; S.coreOk = core >= 0.4; }
+  if (!S.coreOk || (bodyHeight() || 0) < S.H * 0.06) { S.tracks = []; return; }  // nobody clearly in view (empty court, far background)
+  const bh = (bodyHeight() || 0) * sc; if (!bh) return;
+  const headY = head.y * sc, sx = head.x * sc;
+  const x0 = Math.max(0, Math.round(sx - bh * 1.6)), x1 = Math.min(w, Math.round(sx + bh * 1.6));
+  const y0 = 0, y1 = Math.min(S.ph, Math.round(headY + bh * 0.1));
+  const dmin = bh * 0.05, dmax = bh * 0.45;
+  const cands = blobs(mask, w, x0, y0, x1, y1).filter(b => {
+    const d = Math.max(b.bw, b.bh * 0.75);
+    return d >= dmin && d <= dmax && b.bw / b.bh > 0.35 && b.bw / b.bh < 2.6 && b.a > 0.3 * b.bw * b.bh;
+  });
+  assignTracks(cands, t, bh * 0.45, b => b.y < headY - bh * 0.05 && Math.abs(b.x - sx) < bh * 0.9, -bh * 3);
+  if (window.SHOT_DEBUG) console.log("[dbg]", t.toFixed(2), "bh", bh.toFixed(0), "head", headY.toFixed(0), sx.toFixed(0), "c", JSON.stringify(cands.map(c => [c.x | 0, c.y | 0, c.bw, c.bh])), "tr", JSON.stringify(S.tracks.map(tr => tr.pts.map(p => [p.x | 0, p.y | 0]))));
+  for (const tr of S.tracks) {
+    const p = flightPart(tr); if (p.length < 4) continue;
+    const rise = (p[0].y - p[p.length - 1].y) / bh;
+    let mono = 0; for (let i = 1; i < p.length; i++) if (p[i].y < p[i - 1].y) mono++;
+    if (!(rise > 0.5 && mono >= p.length - 2 && t - S.lastShotT > C.COOLDOWN)) continue;
+    if (Math.abs(p[0].x - sx) > bh * 0.9 || p[0].y > headY + bh * 0.5 || p[0].y < headY - bh * 1.6) continue;  // head rises during the jump: allow a chest-high start
+    const armsUp = S.poseHist.some(f => f.t >= t - 0.8 && f.kp[0].s > 0.2 && [9, 10].some(i => f.kp[i].s > 0.2 && f.kp[i].y < f.kp[0].y));
+    if (!armsUp) continue;  // a real shot always lifts a wrist above the head
+    startShot(tr, t, headY, null, p); break;
+  }
+}
+// match blobs to existing ball tracks, closest pairs first; leftovers may start new tracks
+function assignTracks(cands, t, gate, canStart, vy0) {
+  const pairs = [];
+  S.tracks.forEach((tr, ti) => {
+    const p = tr.pts[tr.pts.length - 1], dt = t - p.t; if (dt <= 0 || dt > 0.2) return;
+    cands.forEach((b, bi) => { const d = Math.hypot(b.x - (p.x + tr.vx * dt), b.y - (p.y + tr.vy * dt)); if (d < gate) pairs.push([d, ti, bi]); });
+  });
+  pairs.sort((a, b) => a[0] - b[0]);
+  const usedT = new Set(), usedB = new Set();
+  for (const [, ti, bi] of pairs) {
+    if (usedT.has(ti) || usedB.has(bi)) continue; usedT.add(ti); usedB.add(bi);
+    const tr = S.tracks[ti], b = cands[bi], p = tr.pts[tr.pts.length - 1], dt = t - p.t;
+    tr.vx = (b.x - p.x) / dt; tr.vy = (b.y - p.y) / dt; tr.pts.push({ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) });
+  }
+  cands.forEach((b, bi) => { if (!usedB.has(bi) && canStart(b)) S.tracks.push({ id: S.nextId++, pts: [{ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) }], vx: 0, vy: vy0 }); });
+  S.tracks = S.tracks.filter(tr => t - tr.pts[tr.pts.length - 1].t < 0.25 && tr.pts.length < 80);
+}
+// the part of a track after its lowest point (drops the ball-in-hands phase)
+function flightPart(tr) { const p = tr.pts; let lo = 0; for (let i = 1; i < p.length; i++) if (p[i].y >= p[lo].y) lo = i; return p.slice(lo); }
+function followTrack(tr, mask, w, t, sc) {  // keep drawing the ball after the shot fires
+  const p = tr.pts[tr.pts.length - 1], dt = t - p.t; if (dt > 0.25 || dt <= 0) return;
+  const r = Math.max(8, (p.d || 10) * 3), px = p.x + tr.vx * dt, py = p.y + tr.vy * dt;
+  const x0 = Math.max(0, Math.round(px - r)), x1 = Math.min(w, Math.round(px + r)), y0 = Math.max(0, Math.round(py - r)), y1 = Math.min(S.ph, Math.round(py + r));
+  if (x0 >= x1 || y0 >= y1) return;
+  const bs = blobs(mask, w, x0, y0, x1, y1).filter(b => Math.max(b.bw, b.bh) <= (p.d || 10) * 2.2 && Math.max(b.bw, b.bh) >= (p.d || 10) * 0.4);
+  if (!bs.length) return;
+  const b = bs.reduce((a, c) => Math.hypot(c.x - px, c.y - py) < Math.hypot(a.x - px, a.y - py) ? c : a);
+  tr.vx = (b.x - p.x) / dt; tr.vy = (b.y - p.y) / dt; tr.pts.push({ t, x: b.x, y: b.y, d: Math.max(b.bw, b.bh) });
+}
+function startShot(tr, t, headYp, rim, fp) {
+  const p = fp || tr.pts, a = p[0], b = p[Math.min(2, p.length - 1)];
   const vy = (b.y - a.y) / Math.max(1e-3, b.t - a.t);
   let headTop = headYp;
   const bodyH = bodyHeight();
   if (bodyH) headTop = headYp - 0.1 * bodyH * (S.pw / S.W);
   let tRel = a.t + (headTop - a.y) / vy; if (!(tRel < a.t) || a.t - tRel > 0.5) tRel = a.t - 0.08;
+  // better: release = first moment the ball is clearly away from both wrists
+  if (bodyH) {
+    const sc = S.pw / S.W, lim = Math.max(bodyH * sc * 0.16, 0);
+    for (let i = 0; i < p.length; i++) {
+      const q = p[i]; let fr = null, best = 0.06;
+      for (const f of S.poseHist) { const dt = Math.abs(f.t - q.t); if (dt < best) { best = dt; fr = f; } }
+      if (!fr) continue;
+      const ds = [9, 10].filter(j => fr.kp[j].s > 0.2).map(j => Math.hypot(fr.kp[j].x * sc - q.x, fr.kp[j].y * sc - q.y));
+      if (!ds.length) continue;
+      if (Math.min(...ds) > Math.max(lim, (q.d || 0) * 1.3)) { tRel = i > 0 ? (p[i - 1].t + q.t) / 2 : q.t - 0.02; break; }
+    }
+  }
   S.shot = { n: S.shots.length + 1, tRel, track: tr, phase: "flight", tStart: t, netMax: 0, netSum: 0, tJudge: 0, path: tr.pts };
+  if (window.SHOT_DEBUG) console.log("[start]", t.toFixed(2), tRel.toFixed(2));
   S.lastShotT = t;
 }
 function updateShot(t, net, rim) {
   const s = S.shot;
   if (s.phase === "flight") {
     const p = s.track.pts[s.track.pts.length - 1];
-    s.minY = Math.min(s.minY ?? 1e9, p.y);
-    if (p.y < rim.y + rim.w * 0.7 || t - s.tStart > C.FLIGHT_MAX || !S.tracks.includes(s.track)) {
-      if (s.minY > rim.y + rim.w * 1.3 || Math.abs(p.x - rim.x) > rim.w * 2.5) { S.shot = null; return; }  // never reached the rim: not a shot
+    const dRim = Math.hypot(p.x - rim.x, p.y - rim.y) / rim.w;
+    s.minD = Math.min(s.minD ?? 1e9, dRim);
+    const lost = t - p.t > 0.3;
+    if (dRim < 1.2 || lost || t - s.tStart > C.FLIGHT_MAX) {
+      // lost far from the rim but heading toward it is still a shot (ball can blur out); heading away is not
+      const p0 = s.path[0], toward = Math.hypot(p.x - rim.x, p.y - rim.y) < Math.hypot(p0.x - rim.x, p0.y - rim.y);
+      if (s.minD > 3 && !toward) { S.shot = null; return; }
       s.phase = "judge"; s.tJudge = t;
     }
   }
@@ -297,6 +390,10 @@ function updateShot(t, net, rim) {
     s.netMax = Math.max(s.netMax, net); s.netSum += net;
     if (t - s.tJudge > C.JUDGE) finishShot(t);
   }
+}
+function headNow(t) {  // pose drops out mid-jump: keep the last good head position for a moment
+  if (S.kp && S.kp[0].s > 0.2) return { x: S.kp[0].x, y: S.kp[0].y };
+  return S.lastHead && t - S.lastHead.t < 1.5 && t >= S.lastHead.t - 0.1 ? S.lastHead : null;
 }
 function bodyHeight() {
   const h = S.poseHist.slice(-30).map(f => ank(f.kp) - f.kp[0].y).filter(v => v > 0);
@@ -339,11 +436,11 @@ function feedback(r) {
 }
 function finishShot(t) {
   const s = S.shot; S.shot = null; S.lastShotT = t;
-  const made = s.netMax >= C.NET_MAKE;
+  const made = S.judge ? s.netMax >= C.NET_MAKE : null;
   const form = analyzeForm(s.tRel);
   const rec = { n: s.n, made, auto: true, netMax: +s.netMax.toFixed(3), tRel: s.tRel, form, tips: feedback(form), path: s.path.map(p => ({ x: p.x / (S.pw / S.W), y: p.y / (S.pw / S.W) })) };
   S.shots.push(rec);
-  S.banner = { text: made ? "SWISH!" : "MISS", col: made ? "#78e196" : "#ff5a5a", until: t + 1.6, n: rec.n };
+  S.banner = made === null ? { text: `SHOT #${rec.n}`, col: "#5acdff", until: t + 1.6, n: rec.n } : { text: made ? "SWISH!" : "MISS", col: made ? "#78e196" : "#ff5a5a", until: t + 1.6, n: rec.n };
   console.log("[shot]", JSON.stringify({ n: rec.n, t: +s.tRel.toFixed(2), made, net: rec.netMax, exit: !!s.exitIn, timing: form && Math.round(form.timingMs), jump: form && Math.round(form.jumpCm), dip: form && Math.round(form.dipCm) }));
   updateButtons(); saveShots();
 }
@@ -362,15 +459,16 @@ const fmtT = ms => isFinite(ms) ? (ms >= 0 ? "+" : "") + (ms / 1000).toFixed(2) 
 function draw(t) {
   const W = S.W, H = S.H, k = S.k;
   g.drawImage(video, 0, 0, W, H);
-  const done = S.shots, made = done.filter(s => s.made).length, last = done[done.length - 1];
+  const done = S.shots, made = done.filter(s => s.made === true).length, judged = done.filter(s => s.made !== null).length, last = done[done.length - 1];
   // tiles
   const tw = Math.min((W - 40 * k) / 3, 260 * k), th = 104 * k, ty = 58 * k + (H > W ? 30 * k : 0);
-  const tiles = [["SHOTS", `${made} / ${done.length}`, COL.orange], ["FG %", done.length ? Math.round(100 * made / done.length) + "" : "0", COL.cyan],
-                 ["RELEASE", last && last.form ? fmtT(last.form.timingMs) : "--", COL.yellow]];
+  const tiles = S.judge
+    ? [["SHOTS", `${made} / ${judged}`, COL.orange], ["FG %", judged ? Math.round(100 * made / judged) + "" : "0", COL.cyan], ["RELEASE", last && last.form ? fmtT(last.form.timingMs) : "--", COL.yellow]]
+    : [["SHOTS", `${done.length}`, COL.orange], ["JUMP", last && last.form && isFinite(last.form.jumpCm) ? "~" + Math.round(last.form.jumpCm) + "cm" : "--", COL.cyan], ["RELEASE", last && last.form ? fmtT(last.form.timingMs) : "--", COL.yellow]];
   tiles.forEach(([a, b, c], i) => { const x = 10 * k + i * (tw + 10 * k); panel(x, ty, tw, th, c); text(a, x + 16 * k, ty + 10 * k, 20, c, 1); text(b, x + 16 * k, ty + 44 * k, 42, COL.fg, 1); });
   text("vs 점프정점", 10 * k + 2 * (tw + 10 * k) + tw - 10 * k, ty + 14 * k, 13, COL.dim, 0, "right");
   // rim
-  if (S.rim) {
+  if (S.rim && S.judge) {
     const r = S.rim; g.strokeStyle = "rgba(255,214,64,0.75)"; g.lineWidth = 3 * k;
     g.beginPath(); g.ellipse(r.x, r.y, r.w / 2, r.w * 0.16, 0, 0, Math.PI * 2); g.stroke();
     g.setLineDash([6 * k, 6 * k]); g.strokeStyle = "rgba(255,214,64,0.35)"; g.strokeRect(r.x - r.w * 0.36, r.y + r.w * 0.22, r.w * 0.72, r.w * 0.73); g.setLineDash([]);
@@ -396,26 +494,28 @@ function draw(t) {
       const bh = bodyHeight() || 150 * k;
       let ev = null;
       if (S.shot && t - S.shot.tRel < 0.35) ev = ["RELEASE", COL.yellow];
-      tag("SHOOTER", kp[0].x - 50 * k, kp[0].y - bh * 0.45 - 30 * k, COL.cyan);
+      tag(S.lockOn ? "SHOOTER 🔒" : "SHOOTER", kp[0].x - 50 * k, kp[0].y - bh * 0.45 - 30 * k, COL.cyan);
       if (ev) tag(ev[0], kp[0].x + 40 * k, kp[0].y - bh * 0.45 + 4 * k, ev[1]);
     }
   }
   // banner
-  if (S.banner && t < S.banner.until && S.rim) {
+  if (S.banner && t < S.banner.until && ((S.rim && S.judge) || !S.judge)) {
     const b = S.banner, on = ((S.banner.until - t) * 6 | 0) % 2 === 0 || S.banner.until - t < 1.1;
-    g.font = font(52, 1); const w = g.measureText(b.text).width + 40 * k, x = S.rim.x - w / 2, y = S.rim.y + S.rim.w * 1.5;
+    g.font = font(52, 1); const w = g.measureText(b.text).width + 40 * k;
+    const x = S.judge ? S.rim.x - w / 2 : W / 2 - w / 2, y = S.judge ? S.rim.y + S.rim.w * 1.5 : ty + th + 40 * k;
     if (on) { g.fillStyle = COL.navy; g.fillRect(x, y, w, 78 * k); g.strokeStyle = b.col; g.lineWidth = 4 * k; g.strokeRect(x, y, w, 78 * k); text(b.text, x + 20 * k, y + 12 * k, 52, b.col, 1); }
-    text(`#${b.n}  ${made}/${done.length}`, x + 4 * k, y + 86 * k, 17, COL.fg, 1);
+    if (S.judge) text(`#${b.n}  ${made}/${judged}`, x + 4 * k, y + 86 * k, 17, COL.fg, 1);
   }
   // bottom card
-  const pw = Math.min(W - 20 * k, 560 * k), ph = 230 * k, px = 10 * k, py = H - ph - 80 * k;
+  const pw = Math.min(W - 20 * k, 560 * k), ph = 262 * k, px = 10 * k, py = H - ph - 80 * k;
   panel(px, py, pw, ph, COL.cyan);
-  if (!S.rim) { text("림 왼쪽 끝 → 오른쪽 끝을 탭하세요", px + 18 * k, py + 20 * k, 20, COL.yellow, 1); text("그다음 쏘면 자동으로 잡아요", px + 18 * k, py + 56 * k, 17, COL.dim); }
+  if (S.pickingShooter) { text("슈터를 탭하세요", px + 18 * k, py + 20 * k, 20, COL.yellow, 1); text("그 사람만 따라가요", px + 18 * k, py + 56 * k, 17, COL.dim); }
+  else if (S.judge && !S.rim) { text("림 왼쪽 끝 → 오른쪽 끝을 탭하세요", px + 18 * k, py + 20 * k, 20, COL.yellow, 1); text("그다음 쏘면 자동으로 잡아요", px + 18 * k, py + 56 * k, 17, COL.dim); }
   else if (!last) { text("SHOT FORM", px + 18 * k, py + 14 * k, 22, COL.cyan, 1); text(S.shot ? "슛 추적 중..." : "첫 슛 기다리는 중", px + 18 * k, py + 56 * k, 19, COL.dim); }
   else {
     const f = last.form || {};
     text(`SHOT #${last.n}`, px + 18 * k, py + 12 * k, 22, COL.cyan, 1);
-    text(last.made ? "MAKE" : "MISS", px + 150 * k, py + 12 * k, 22, last.made ? COL.green : COL.red, 1);
+    if (last.made !== null) text(last.made ? "MAKE" : "MISS", px + 150 * k, py + 12 * k, 22, last.made ? COL.green : COL.red, 1);
     const rows = [["릴리즈 타이밍", fmtT(f.timingMs), isFinite(f.timingMs) ? Math.min(1, Math.abs(f.timingMs) / 300) : 0, isFinite(f.timingMs) && Math.abs(f.timingMs) > 120 ? COL.red : COL.green],
                   ["무릎 로딩", isFinite(f.dipCm) ? Math.round(f.dipCm) + "cm" : "--", isFinite(f.dipCm) ? Math.min(1, f.dipCm / 30) : 0, COL.orange],
                   ["점프 높이", isFinite(f.jumpCm) ? "~" + Math.round(f.jumpCm) + "cm" : "--", isFinite(f.jumpCm) ? Math.min(1, f.jumpCm / 50) : 0, COL.cyan]];
@@ -425,7 +525,7 @@ function draw(t) {
     if (pw - colW > 150 * k) last.tips.forEach((s, i) => text(s, tx, py + 52 * k + i * 30 * k, 15, i === 0 ? COL.yellow : COL.fg, i === 0));
     // shot log squares
     const n = Math.min(done.length, 12), start = done.length - n;
-    for (let i = 0; i < n; i++) { const s = done[start + i], x = px + 18 * k + i * 30 * k, y = py + ph - 40 * k; g.fillStyle = s.made ? COL.green : COL.red; g.fillRect(x, y, 24 * k, 24 * k); text(s.made ? "O" : "X", x + 12 * k, y + 4 * k, 15, "#0e122e", 1, "center"); }
+    for (let i = 0; i < n; i++) { const s = done[start + i], x = px + 18 * k + i * 30 * k, y = py + ph - 34 * k; g.fillStyle = s.made === null ? COL.cyan : s.made ? COL.green : COL.red; g.fillRect(x, y, 24 * k, 24 * k); text(s.made === null ? String(s.n % 100) : s.made ? "O" : "X", x + 12 * k, y + 4 * k, s.made === null && s.n > 9 ? 12 : 15, "#0e122e", 1, "center"); }
   }
   if (S.debugOn) text(`net ${S.debug.net.toFixed(3)}  tracks ${S.tracks.length}  ${S.fps.toFixed(0)}fps`, 12 * k, H - 40 * k, 14, COL.dim);
 }
@@ -446,6 +546,15 @@ async function frame() {
   if (video.requestVideoFrameCallback && S.src === "file") video.requestVideoFrameCallback(frame); else requestAnimationFrame(frame);
 }
 
+async function stepLoop() {
+  video.pause(); const fps = window.SHOT_FPS || 30, n = Math.floor(video.duration * fps);
+  for (let i = 1; i < n; i++) {
+    const t = i / fps; video.currentTime = t; await new Promise(r => video.addEventListener("seeked", r, { once: true }));
+    motionStep(t); await runPose(t); draw(t);
+    if (i % 300 === 0) console.log("[step]", i, n);
+  }
+  console.log("[done]", JSON.stringify(S.shots.map(s => ({ n: s.n, made: s.made, t: +s.tRel.toFixed(2) }))));
+}
 function sizeCanvas() {
   S.W = video.videoWidth; S.H = video.videoHeight; S.k = Math.min(S.W, S.H) / 720 * (S.W > S.H ? 0.9 : 1);
   hud.width = S.W; hud.height = S.H; setupProc();
@@ -467,12 +576,19 @@ async function begin(src) {
   } catch (e) { $("#err").textContent = src === "cam" ? "카메라를 열 수 없어요. 브라우저에서 카메라 권한을 허용해 주세요 (https 주소에서만 됩니다)." : "영상을 재생할 수 없어요."; console.error(e); $("#toast").hidden = true; return; }
   await new Promise(r => video.readyState >= 1 ? r() : video.onloadedmetadata = r);
   sizeCanvas();
+  S.judge = $("#hJudge").checked; S.lockOn = $("#hLock").checked; store.set("judge", S.judge); store.set("lock", S.lockOn); syncToggles();
   const saved = store.get("rim:" + S.W + "x" + S.H, null);
-  if (saved && src === "cam") S.rim = saved; else { S.rim = null; startRimPick(); }
-  if (window.SHOT_RIM) S.rim = window.SHOT_RIM;
+  S.rim = null;
+  if (S.judge) { if (saved && src === "cam") S.rim = saved; else startRimPick(); }
+  if (window.SHOT_RIM) { S.rim = window.SHOT_RIM; S.picking = false; }
+  if (S.lockOn) { S.picking = false; S.pickingShooter = true; }
+  if (window.SHOT_SHOOTER) { setShooter(window.SHOT_SHOOTER); }
   $("#sheet").hidden = true; $("#top").hidden = false; $("#bottom").hidden = false;
-  $("#toast").hidden = true; S.running = true; fpsT = now(); frame();
-  if (!S.rim) toast("림 왼쪽 끝을 탭하세요", 3000);
+  $("#toast").hidden = true; S.running = true; fpsT = now();
+  if (window.SHOT_STEP && src === "file") return stepLoop();  // test hook: emulate a fast phone, frame by frame
+  frame();
+  if (S.pickingShooter) toast("슈터를 탭하세요", 3000);
+  else if (S.judge && !S.rim) toast("림 왼쪽 끝을 탭하세요", 3000);
 }
 function startRimPick() { S.picking = true; S.rimPick = []; S.rim = null; S.tracks = []; S.shot = null; }
 function clientToVideo(ev) {
@@ -480,9 +596,19 @@ function clientToVideo(ev) {
   const ox = r.left + (r.width - S.W * s) / 2, oy = r.top + (r.height - S.H * s) / 2;
   return { x: (ev.clientX - ox) / s, y: (ev.clientY - oy) / s };
 }
+function setShooter(p) {
+  S.lockOn = true; S.pickingShooter = false; store.set("lock", true); syncToggles();
+  const s = Math.min(S.W, S.H) * 0.5;
+  S.shooter = { x: p.x, y: p.y, s }; S.crop = { cx: p.x, cy: p.y, s }; S.kp = null; S.poseHist = []; S.tracks = [];
+}
 hud.addEventListener("pointerdown", ev => {
-  if (!S.picking) return;
   const p = clientToVideo(ev); if (p.x < 0 || p.y < 0 || p.x > S.W || p.y > S.H) return;
+  if (S.pickingShooter) {
+    setShooter(p); toast("슈터 고정!" + (S.judge && !S.rim ? " 이제 림 왼쪽 끝을 탭하세요" : ""), 2600);
+    if (S.judge && !S.rim) startRimPick();
+    return;
+  }
+  if (!S.picking) return;
   S.rimPick.push(p);
   if (S.rimPick.length === 1) toast("이제 림 오른쪽 끝을 탭하세요", 3000);
   if (S.rimPick.length === 2) {
@@ -495,20 +621,46 @@ hud.addEventListener("pointerdown", ev => {
 
 /* ============ controls ============ */
 function updateButtons() { const has = S.shots.length > 0; ["#bMake", "#bMiss", "#bUndo"].forEach(id => $(id).disabled = !has); }
+function syncToggles() {
+  $("#sJudge").checked = $("#hJudge").checked = S.judge; $("#sLock").checked = $("#hLock").checked = S.lockOn;
+  $("#bRim").hidden = !S.judge; $("#bMake").hidden = $("#bMiss").hidden = !S.judge;
+  $("#bShooter").classList.toggle("lock", S.lockOn); $("#bShooter").textContent = S.lockOn ? "🔒 슈터" : "👤 슈터";
+}
+$("#bShooter").onclick = () => {
+  if (S.lockOn && !S.pickingShooter) { S.lockOn = false; S.shooter = null; store.set("lock", false); syncToggles(); toast("슈터 고정 해제 (자동 인식)"); return; }
+  S.pickingShooter = true; S.picking = false; toast("슈터를 탭하세요", 3000);
+};
 $("#bCam").onclick = () => begin("cam");
 $("#fileIn").onchange = e => { const f = e.target.files[0]; if (!f) return; video.src = URL.createObjectURL(f); begin("file"); };
 $("#bRim").onclick = () => { startRimPick(); toast("림 왼쪽 끝을 탭하세요", 3000); };
 $("#bMake").onclick = () => fix(true); $("#bMiss").onclick = () => fix(false);
 $("#bUndo").onclick = () => { S.shots.pop(); updateButtons(); saveShots(); toast("마지막 슛 삭제"); };
-function fix(made) { const s = S.shots[S.shots.length - 1]; if (!s) return; s.made = made; s.auto = false; saveShots(); toast(`#${s.n} → ${made ? "성공" : "실패"}로 수정`); }
+function fix(made) {
+  const s = S.shots[S.shots.length - 1]; if (!s || s.made === null) return; s.made = made; s.auto = false; saveShots();
+  // learn this court: put the make threshold between the strongest miss and the weakest make
+  const mk = S.shots.filter(x => x.made === true && x.netMax != null).map(x => x.netMax), ms = S.shots.filter(x => x.made === false && x.netMax != null).map(x => x.netMax);
+  let note = "";
+  if (mk.length && ms.length && Math.min(...mk) > Math.max(...ms)) {
+    C.NET_MAKE = +((Math.min(...mk) + Math.max(...ms)) / 2).toFixed(3); store.set("net3", C.NET_MAKE); $("#sNet").value = C.NET_MAKE; note = ` · 판정 기준 ${C.NET_MAKE.toFixed(2)}로 조정`;
+  } else if (mk.length && !ms.length && Math.min(...mk) < C.NET_MAKE) {
+    C.NET_MAKE = +(Math.min(...mk) * 0.85).toFixed(3); store.set("net3", C.NET_MAKE); $("#sNet").value = C.NET_MAKE; note = ` · 판정 기준 ${C.NET_MAKE.toFixed(2)}로 조정`;
+  } else if (ms.length && !mk.length && Math.max(...ms) >= C.NET_MAKE) {
+    C.NET_MAKE = +(Math.max(...ms) * 1.15).toFixed(3); store.set("net3", C.NET_MAKE); $("#sNet").value = C.NET_MAKE; note = ` · 판정 기준 ${C.NET_MAKE.toFixed(2)}로 조정`;
+  }
+  toast(`#${s.n} → ${made ? "성공" : "실패"}로 수정${note}`, 3000);
+}
 $("#bSet").onclick = () => { $("#settings").hidden = false; };
 $("#bClose").onclick = async () => {
   $("#settings").hidden = true;
   S.heightCm = +$("#sHeight").value || 175; store.set("height", S.heightCm);
-  C.NET_MAKE = +$("#sNet").value || 0.40; store.set("net2", C.NET_MAKE);
+  C.NET_MAKE = +$("#sNet").value || 0.34; store.set("net3", C.NET_MAKE);
+  const j = $("#sJudge").checked; if (j !== S.judge) { S.judge = j; store.set("judge", j); S.shot = null; S.tracks = []; if (j && !S.rim) { startRimPick(); toast("림 왼쪽 끝을 탭하세요", 3000); } }
+  const l = $("#sLock").checked; if (l !== S.lockOn) { S.lockOn = l; store.set("lock", l); if (l) { S.pickingShooter = true; toast("슈터를 탭하세요", 3000); } else { S.shooter = null; } }
+  syncToggles();
   const m = $("#sModel").value; if (m !== S.modelType) { S.modelType = m; store.set("model", m); toast("모델 바꾸는 중...", 0); S.model = await loadModel(m); S.crop = null; toast("완료"); }
 };
 $("#bReset").onclick = () => { S.shots = []; saveShots(); updateButtons(); toast("기록 초기화"); };
+syncToggles();
 $("#sModel").value = S.modelType; $("#sNet").value = C.NET_MAKE; $("#hInit").value = S.heightCm; $("#sHeight").value = S.heightCm;
 // recording (canvas with HUD)
 let rec = null, chunks = [];
