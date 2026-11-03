@@ -57,7 +57,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .checklist{display:grid;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
 .checklist div{display:flex;align-items:center;gap:12px;font-size:15px}
 .checklist .ico{color:var(--cyan)}
-.chiprow{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.chiprow{display:flex;justify-content:flex-start;align-items:center;gap:8px;flex-wrap:wrap}
 #hInit{width:3.2em;background:transparent;border:0;color:var(--fg);font:inherit;text-align:right;padding:0}
 #err{color:var(--orange);min-height:1.4em;margin:0}
 .small{font-size:13px;color:var(--dim);margin:0}
@@ -101,7 +101,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 #cGauge:empty{display:none}
 #cGauge .gauge{font-size:13px;grid-template-columns:5em minmax(0,1fr) 6.4em}
 /* --- 4 detail / menu sheets --- */
-.scrim{position:fixed;inset:0;z-index:10;background:rgba(4,6,14,.62);display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:fixed;inset:0;z-index:18;background:rgba(4,6,14,.62);display:flex;align-items:flex-end;justify-content:center}
 .sheet{width:100%;max-width:560px;max-height:88vh;overflow:auto;display:flex;flex-direction:column;gap:12px;background:var(--panel);border-top:1px solid var(--line);border-radius:22px 22px 0 0;
   padding:10px var(--gutR) calc(env(safe-area-inset-bottom,0px) + 22px) var(--gut)}
 .grab{align-self:center;width:40px;height:4px;border-radius:2px;background:var(--line2);flex:none}
@@ -148,8 +148,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .tile span{font-size:13px;color:var(--dim)}
 .tile b{font:700 30px var(--px)}
 .strip{display:flex;gap:6px;flex-wrap:wrap}
-.strip div{flex:1 0 28px;max-width:52px;height:40px;display:flex;align-items:center;justify-content:center;font:700 15px var(--px)}
-.strip .o{background:var(--green);color:#0e122e}.strip .x{border:1px solid var(--orange);color:var(--orange)}.strip .n{border:1px solid var(--cyan);color:var(--cyan);font-size:12px}
+.strip button{font:inherit;padding:0;cursor:pointer;background:none}
+.strip div,.strip button{flex:1 0 28px;max-width:52px;height:40px;display:flex;align-items:center;justify-content:center;font:700 15px var(--px)}
+.strip .o{background:var(--green);color:#0e122e;border:0}.strip .x{border:1px solid var(--orange);color:var(--orange)}.strip .n{border:1px solid var(--cyan);color:var(--cyan);font-size:12px}
 .box{display:grid;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
 .bars{display:grid;grid-template-columns:84px minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:14px}
 .bars .t{height:8px;border-radius:4px;background:var(--row)}.bars .t i{display:block;height:8px;border-radius:4px;background:var(--green)}
@@ -159,6 +160,12 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
 .focus span:first-child{font-size:13px;color:var(--yellow);font-weight:700}
 .focus strong{font-size:19px}
 .focus span:last-child{font-size:14px;line-height:1.55;color:var(--fg2)}
+.replay{position:relative;border-radius:12px;overflow:hidden;background:#000;flex:none}
+.replay img{display:block;width:100%;max-height:40vh;object-fit:contain;background:#000}
+.replay .ctl{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:6px 10px;background:linear-gradient(transparent,rgba(4,6,14,.85))}
+.replay .ctl input{flex:1;accent-color:var(--yellow);min-height:44px}
+.replay .tm{position:absolute;left:10px;top:8px;background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font:700 13px var(--px);color:var(--fg)}
+.replay .tm.rel{border-color:var(--yellow);color:var(--yellow)}
 #toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:30;background:var(--glass);border:1px solid var(--yellow);border-radius:12px;
   color:var(--yellow);padding:12px 18px;font-size:16px;font-weight:700;text-align:center;max-width:88vw;pointer-events:none}
 @media (orientation:landscape) and (max-height:560px){
@@ -199,6 +206,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
   <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
   <symbol id="i-rot" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 1 5.2-2M15 13a3 3 0 0 1-5.2 2"/><path d="M14 9.5l.4 1.6-1.6.3M10 16.5l-.4-1.6 1.6-.3"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
 </svg>
 
@@ -243,6 +253,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
     <div class="grab"></div>
     <div class="hd"><div style="display:flex;align-items:center;gap:10px"><h2 id="dTitle">SHOT #1</h2><span id="dRes"></span></div>
       <button class="close" type="button" data-close aria-label="닫기"><svg class="ico"><use href="#i-x"/></svg></button></div>
+    <div class="replay" id="dReplay" hidden><img id="dImg" alt="이 슛 장면 다시 보기"><span class="tm" id="dTm"></span>
+      <div class="ctl"><button class="round" id="dPlay" type="button" aria-label="일시정지"><svg class="ico"><use href="#i-pause"/></svg></button><input type="range" id="dSeek" min="0" max="0" value="0" aria-label="장면 위치"></div></div>
     <div class="rows" id="dRows"></div>
     <div class="note" id="dNote"></div>
     <div class="fixrow" id="dFix"><span>판정이 틀렸나요?</span><button type="button" id="bMake">성공으로</button><button type="button" id="bMiss">실패로</button><button type="button" id="bUndo" aria-label="이 슛 삭제"><svg class="ico s" style="vertical-align:-3px"><use href="#i-trash"/></svg> 삭제</button></div>
@@ -258,6 +270,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
       <button type="button" id="mEnd"><svg class="ico"><use href="#i-flag"/></svg>연습 끝내고 요약 보기</button>
       <button type="button" id="mRec"><svg class="ico"><use href="#i-rec"/></svg><span id="mRecT">화면 녹화</span></button>
       <button type="button" id="mVoice" aria-pressed="true"><svg class="ico"><use href="#i-sound"/></svg>음성 안내<span class="val" id="mVoiceV">켜짐</span></button>
+      <button type="button" id="mCam"><svg class="ico"><use href="#i-swap"/></svg>카메라 전환<span class="val" id="mCamV">후면</span></button>
       <button type="button" id="mRot"><svg class="ico"><use href="#i-rot"/></svg>화면 돌리기<span class="val" id="mRotV">그대로</span></button>
       <button type="button" id="mJudge"><svg class="ico"><use href="#i-rim"/></svg><span id="mJudgeT">성공/실패 판정</span><span class="val" id="mJudgeV">켜짐</span></button>
       <label><svg class="ico"><use href="#i-ruler"/></svg>키 (cm)<input id="sHeight" type="number" min="120" max="230" value="175" inputmode="numeric"></label>
@@ -273,7 +286,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
   <div class="wrap">
     <div style="display:grid;gap:4px"><span class="small" id="suMeta"></span><h1>오늘 연습</h1></div>
     <div class="tiles" id="suTiles"></div>
-    <div class="strip" id="suStrip" role="img"></div>
+    <div style="display:grid;gap:6px"><div class="strip" id="suStrip" role="group" aria-label="슛 다시 보기"></div><span class="small" id="suStripHint">번호를 누르면 그 슛 장면과 데이터를 볼 수 있어요</span></div>
     <div class="box" id="suBox"></div>
     <div class="focus" id="suFocus"></div>
     <div style="flex-grow:1"></div>
@@ -303,6 +316,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(-
     </div>
     <div class="chiprow">
       <label class="pill" for="hInit">키 <input id="hInit" type="number" min="120" max="230" value="175" inputmode="numeric">cm<svg class="ico xs" style="color:var(--dim)"><use href="#i-pen"/></svg></label>
+      <button class="pill" id="bFacing" type="button" aria-label="사용할 카메라 바꾸기"><svg class="ico s"><use href="#i-swap"/></svg><span>후면 카메라</span></button>
       <button class="pill" id="bVoice" type="button" aria-pressed="true"><svg class="ico s"><use href="#i-sound"/></svg><span>음성 안내 켜짐</span></button>
     </div>
     <p class="small">처음 한 번은 AI 모델(약 13MB)을 내려받아 몇 초 걸려요. 분석은 전부 이 폰 안에서 돌아가요.</p>
@@ -888,6 +902,8 @@ function finishShot(t) {
   const m = measureShot(s);
   const rec = { n: s.n, made, auto: true, netMax: +s.netMax.toFixed(3), tRel: s.tRel, m, path: m && m.flight && m.flight.length >= 2 ? m.flight : [] };  // only the clean flight is drawn
   Object.assign(rec, gradeShot(rec, S.shots));
+  const fr = (S.ring || []).filter(f => f.t >= s.tRel - REPLAY.BEFORE && f.t <= s.tRel + REPLAY.AFTER);
+  rec.frames = fr.map(f => f.url); rec.frameT = fr.map(f => +(f.t - s.tRel).toFixed(2));
   S.shots.push(rec);
   if (window.SHOT_STEP) console.log("[raw]", JSON.stringify({ n: rec.n, made, tRel: s.tRel, path: s.path.map(p => [+p.t.toFixed(3), +p.x.toFixed(1), +p.y.toFixed(1)]), pose: S.poseHist.filter(f => f.t > s.tRel - 1.8 && f.t < s.tRel + 1.4).map(f => [+f.t.toFixed(3), f.kp.map(k => [Math.round(k.x), Math.round(k.y), +k.s.toFixed(2)])]), ctx: { rim: S.rim, judge: S.judge, pw: S.pw, W: S.W, H: S.H, heightCm: S.heightCm } }));
   if (window.SHOT_STEP || window.SHOT_DEBUG) console.log("[eval]", rec.n, JSON.stringify(m && Object.fromEntries(Object.entries(m).filter(([k, v]) => typeof v !== "object").map(([k, v]) => [k, typeof v === "number" ? +v.toFixed(2) : v]))), "|", rec.line.main, "/", rec.line.fix, "|", Object.values(rec.items).map(i => i.key + ":" + i.state).join(" "));
@@ -959,7 +975,7 @@ async function frame() {
     lastFrameT = t;
     prepFrame(); motionStep(t);
     if (!S.busy && !window.SHOT_NOPOSE) { S.busy = true; runPose(t).catch(e => console.warn(e)).finally(() => S.busy = false); }
-    draw(t); checkFraming(t);
+    draw(t); checkFraming(t); captureFrame(t);
     fpsN++; if (t - fpsT > 1) { S.fps = fpsN / (t - fpsT); fpsN = 0; fpsT = t; }
     if (!!S.shot !== S.wasTracking) { S.wasTracking = !!S.shot; renderScore(); }
   }
@@ -970,11 +986,23 @@ async function stepLoop() {  // test hook: every frame analysed, as on a fast ph
   video.pause(); const fps = window.SHOT_FPS || 30, n = Math.floor(Math.min(video.duration, window.SHOT_T1 || 1e9) * fps);
   for (let i = Math.max(1, Math.floor((window.SHOT_T0 || 0) * fps)); i < n; i++) {
     const t = i / fps; video.currentTime = t; await new Promise(r => video.addEventListener("seeked", r, { once: true }));
-    prepFrame(); motionStep(t); if (i % (window.SHOT_POSE_EVERY || 1) === 0) await runPose(t); draw(t); checkFraming(t);
+    prepFrame(); motionStep(t); if (i % (window.SHOT_POSE_EVERY || 1) === 0) await runPose(t); draw(t); checkFraming(t); captureFrame(t);
     if (i % 300 === 0) console.log("[step]", i, n);
   }
   console.log("[done]", JSON.stringify(S.shots.map(s => ({ n: s.n, made: s.made, t: +s.tRel.toFixed(2) }))));
   showSummary();
+}
+// per-shot replay: keep the last few seconds of the HUD as small JPEG frames (10 fps), cut out around each shot
+const REPLAY = { LONG: 320, STEP: 0.1, KEEP: 5, BEFORE: 1.0, AFTER: 1.2 };
+function captureFrame(t) {
+  const ring = S.ring || (S.ring = []), last = ring[ring.length - 1];
+  if (last && t < last.t) ring.length = 0;                   // video jumped back
+  else if (last && t - last.t < REPLAY.STEP) return;
+  if (!S.rc) { S.rc = document.createElement("canvas"); S.rcx = S.rc.getContext("2d"); }
+  const k = REPLAY.LONG / Math.max(S.W, S.H), w = Math.round(S.W * k), h = Math.round(S.H * k);
+  if (S.rc.width !== w || S.rc.height !== h) { S.rc.width = w; S.rc.height = h; }
+  try { S.rcx.drawImage(hud, 0, 0, w, h); ring.push({ t, url: S.rc.toDataURL("image/jpeg", 0.6) }); } catch { return; }
+  while (ring.length && ring[0].t < t - REPLAY.KEEP) ring.shift();
 }
 // shooter filling the screen: the ball leaves the top right after release, so ask for more room
 function checkFraming(t) {
@@ -1047,6 +1075,25 @@ function sizeCanvas() {
   const sw = !!(S.rot % 180); S.W = sw ? video.videoHeight : video.videoWidth; S.H = sw ? video.videoWidth : video.videoHeight; S.k = Math.min(S.W, S.H) / 720 * (S.W > S.H ? 0.9 : 1);
   hud.width = S.W; hud.height = S.H; setupProc();
 }
+const openCamera = facing => navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } });
+const FACING_TXT = { environment: "후면", user: "전면" };
+function setFacing(f) {
+  S.facing = f; store.set("facing", f);
+  $("#bFacing span").textContent = FACING_TXT[f] + " 카메라"; $("#mCamV").textContent = FACING_TXT[f];
+}
+// switch cameras mid-session: the picture changes completely, so the rim and the shooter lock start over
+async function switchCamera() {
+  const next = S.facing === "user" ? "environment" : "user";
+  let stream; try { stream = await openCamera(next); } catch (e) { toast("다른 카메라를 열 수 없어요"); return; }
+  try { video.srcObject && video.srcObject.getTracks().forEach(t => t.stop()); } catch {}
+  video.srcObject = stream; setFacing(next);
+  await video.play().catch(() => {});
+  await new Promise(r => video.readyState >= 1 ? r() : video.onloadedmetadata = r);
+  S.rot = 0; sizeCanvas(); S.ring = [];
+  S.crop = null; S.kp = null; S.poseHist = []; S.tracks = []; S.shot = null; S.shooter = null; S.lockOn = false; syncUi();
+  if (S.judge || S.rim) { S.rim = null; S.judge = false; openSetup(); }
+  renderScore(); toast(FACING_TXT[next] + " 카메라", 1600);
+}
 async function begin(src) {
   $("#err").textContent = "";
   S.heightCm = +$("#hInit").value || 175; store.set("height", S.heightCm); $("#sHeight").value = S.heightCm;
@@ -1055,8 +1102,7 @@ async function begin(src) {
   } catch (e) { $("#err").textContent = "모델을 못 불러왔어요. 인터넷 연결을 확인해 주세요."; console.error(e); $("#toast").hidden = true; return; }
   try {
     if (src === "cam") {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } });
-      video.srcObject = stream; S.src = "cam";
+      video.srcObject = await openCamera(S.facing); S.src = "cam";
       try { S.wake = await navigator.wakeLock?.request("screen"); } catch {}
     } else { S.src = "file"; }
     if (window.SHOT_RATE) video.playbackRate = window.SHOT_RATE;
@@ -1066,6 +1112,7 @@ async function begin(src) {
   S.rot = 0; sizeCanvas();
   if (window.SHOT_ROT != null) { S.rot = window.SHOT_ROT; sizeCanvas(); }
   else if (src === "file") { await new Promise(r => video.readyState >= 2 ? r() : video.addEventListener("loadeddata", r, { once: true })); await autoRotate(); }
+  S.ring = [];
   S.sessionT0 = Date.now(); S.shots = []; S.shotSeq = 0; S.handVotes = null; S.rim = null; S.judge = false;
   $("#start").hidden = true; $("#toast").hidden = true;
   if (window.SHOT_SHOOTER) setShooter(window.SHOT_SHOOTER);
@@ -1178,13 +1225,37 @@ function openDetail(rec) {
   let note = view === "front" ? "지금은 <b style='color:var(--fg)'>정면</b> 촬영이에요. 측면에서 찍으면 아치와 깊이도 볼 수 있어요." : "지금은 <b style='color:var(--fg)'>측면</b> 촬영이에요. 정면에서 찍으면 좌우 직선과 무릎·무게중심도 볼 수 있어요.";
   if (!S.judge) note += " 림을 지정하면 성공률도 기록해요.";
   $("#dNote").innerHTML = `<svg class="ico"><use href="#i-cam"/></svg><span>${note}</span>`;
+  startReplay(rec);
   $("#bMake").hidden = $("#bMiss").hidden = rec.made === null;
   $("#dFix").querySelector("span").textContent = rec.made === null ? "" : "판정이 틀렸나요?";
   openSheet("#detail");
 }
+// flip-book of the shot: loops, holds a moment on the last frame, tap the button or drag to pause/scrub
+const RP = { rec: null, i: 0, timer: 0, playing: false };
+function showFrame(i) {
+  const r = RP.rec; RP.i = Math.max(0, Math.min(r.frames.length - 1, i));
+  $("#dImg").src = r.frames[RP.i]; $("#dSeek").value = RP.i;
+  const dt = r.frameT[RP.i], rel = Math.abs(dt) < 0.051;
+  $("#dTm").textContent = rel ? "릴리즈" : (dt > 0 ? "+" : "") + dt.toFixed(1) + "초"; $("#dTm").classList.toggle("rel", rel);
+}
+function setPlaying(on) {
+  RP.playing = on; clearTimeout(RP.timer);
+  $("#dPlay use").setAttribute("href", on ? "#i-pause" : "#i-play"); $("#dPlay").setAttribute("aria-label", on ? "일시정지" : "재생");
+  if (!on) return;
+  const tick = () => { const n = RP.rec.frames.length; showFrame((RP.i + 1) % n); RP.timer = setTimeout(tick, RP.i === n - 1 ? 900 : 100); };
+  RP.timer = setTimeout(tick, 100);
+}
+function startReplay(rec) {
+  clearTimeout(RP.timer); RP.rec = rec;
+  const has = rec.frames && rec.frames.length > 1; $("#dReplay").hidden = !has; if (!has) return;
+  $("#dSeek").max = rec.frames.length - 1; showFrame(0);
+  setPlaying(!matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+$("#dPlay").onclick = () => setPlaying(!RP.playing);
+$("#dSeek").oninput = e => { setPlaying(false); showFrame(+e.target.value); };
 let lastFocus = null;
 function openSheet(id) { lastFocus = document.activeElement; $(id).hidden = false; const c = $(id).querySelector("[data-close]"); c && c.focus(); }
-function closeSheets() { document.querySelectorAll(".scrim").forEach(e => e.hidden = true); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+function closeSheets() { clearTimeout(RP.timer); RP.playing = false; document.querySelectorAll(".scrim").forEach(e => e.hidden = true); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
 document.querySelectorAll(".scrim").forEach(sc => sc.addEventListener("click", e => { if (e.target === sc || e.target.closest("[data-close]")) closeSheets(); }));
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheets(); });
 
@@ -1231,8 +1302,8 @@ function showSummary() {
   const tiles = jd ? [["슛", n, ""], ["성공", mk, "var(--green)"], ["성공률", Math.round(100 * mk / jd) + "%", "var(--yellow)"]]
                    : [["슛", n, ""], ["기준 모두 통과", allOk, "var(--green)"], ["통과율", n ? Math.round(100 * allOk / n) + "%" : "--", "var(--yellow)"]];
   $("#suTiles").innerHTML = tiles.map(([a, b, c]) => `<div class="tile"><span>${a}</span><b style="color:${c || "var(--fg)"}">${b}</b></div>`).join("");
-  $("#suStrip").innerHTML = sh.slice(-20).map(s => s.made === null ? `<div class="n">${s.n}</div>` : s.made ? `<div class="o">O</div>` : `<div class="x">X</div>`).join("");
-  $("#suStrip").setAttribute("aria-label", "슛 기록: " + sh.slice(-20).map(s => s.made === null ? s.n + "번" : s.made ? "성공" : "실패").join(", "));
+  $("#suStrip").innerHTML = sh.slice(-20).map(s => `<button type="button" data-n="${s.n}" class="${s.made === null ? "n" : s.made ? "o" : "x"}" aria-label="${s.n}번 슛${s.made === null ? "" : s.made ? " 성공" : " 실패"} 다시 보기">${s.made === null ? s.n : s.made ? "O" : "X"}</button>`).join("");
+  $("#suStripHint").hidden = !n;
   const bars = SUM_ORDER.map(k => { const ev = sh.filter(s => s.items && s.items[k] && (s.items[k].state === "ok" || s.items[k].state === "warn")); return { k, label: ev[0] ? ev[0].items[k].label : "", ok: ev.filter(s => s.items[k].state === "ok").length, n: ev.length }; }).filter(b => b.n);
   const lastRec = sh[sh.length - 1], cons = lastRec && lastRec.items.cons;
   $("#suBox").innerHTML = !n ? `<strong style="font-size:15px">아직 기록된 슛이 없어요</strong>` :
@@ -1249,6 +1320,7 @@ function showSummary() {
   } else $("#suFocus").innerHTML = n ? `<span>다음에 집중할 것</span><strong>지금 폼 그대로</strong><span>모든 기준을 지켰어요. 같은 리듬으로 반복해서 일관성을 쌓아보세요.</span>` : `<span>다음에 집중할 것</span><strong>첫 슛 쏘기</strong><span>전신이 보이게 서서 몇 개 쏘면 요약이 채워져요.</span>`;
   $("#summary").hidden = false; $("#bCont").hidden = S.src === "file" && !S.running && !window.SHOT_STEP && video.ended;
 }
+$("#suStrip").onclick = e => { const b = e.target.closest("button[data-n]"); if (b) openDetail(S.shots.find(s => s.n === +b.dataset.n)); };
 $("#bCont").onclick = () => { $("#summary").hidden = true; };
 $("#bEnd").onclick = () => { try { video.srcObject && video.srcObject.getTracks().forEach(t => t.stop()); S.wake && S.wake.release(); } catch {} location.reload(); };
 
@@ -1266,9 +1338,11 @@ $("#bCam").onclick = () => begin("cam");
 $("#fileIn").onchange = e => { const f = e.target.files[0]; if (!f) return; video.src = URL.createObjectURL(f); begin("file"); };
 $("#bFile").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("#fileIn").click(); } };
 $("#bRim").onclick = () => openSetup();
-$("#bMenu").onclick = () => { $("#mRotV").textContent = ROT_TXT[S.rot || 0]; openSheet("#menu"); };
+$("#bMenu").onclick = () => { $("#mRotV").textContent = ROT_TXT[S.rot || 0]; $("#mCam").hidden = S.src !== "cam"; openSheet("#menu"); };
 $("#mEnd").onclick = () => showSummary();
 $("#mVoice").onclick = () => setVoice(!S.voice);
+$("#bFacing").onclick = () => { setFacing(S.facing === "user" ? "environment" : "user"); toast(FACING_TXT[S.facing] + " 카메라로 시작해요", 1600); };
+$("#mCam").onclick = () => { closeSheets(); switchCamera(); };
 const ROT_TXT = { 0: "그대로", 90: "오른쪽으로 90°", 270: "왼쪽으로 90°", 180: "뒤집기" };
 $("#mRot").onclick = () => { closeSheets(); setRotation(S.rot === 0 ? 90 : S.rot === 90 ? 270 : 0); toast("화면 " + ROT_TXT[S.rot]); };
 $("#mJudge").onclick = () => {
@@ -1285,7 +1359,7 @@ $("#bReset").onclick = () => { S.shots = []; S.shotSeq = 0; S.handVotes = null; 
 $("#bMake").onclick = () => fix(S.detail, true); $("#bMiss").onclick = () => fix(S.detail, false);
 $("#bUndo").onclick = () => {
   const r = S.detail; if (!r) return; S.shots = S.shots.filter(x => x !== r); saveShots(); renderScore();
-  renderCard(S.shots[S.shots.length - 1] || null); closeSheets(); toast(`#${r.n} 삭제`);
+  renderCard(S.shots[S.shots.length - 1] || null); closeSheets(); if (!$("#summary").hidden) showSummary(); toast(`#${r.n} 삭제`);
 };
 function fix(s, made) {
   if (!s || s.made === null) return; s.made = made; s.auto = false;
@@ -1297,11 +1371,11 @@ function fix(s, made) {
   else if (mk.length && !ms.length && Math.min(...mk) < C.NET_MAKE) C.NET_MAKE = +(Math.min(...mk) * 0.85).toFixed(3);
   else if (ms.length && !mk.length && Math.max(...ms) >= C.NET_MAKE) C.NET_MAKE = +(Math.max(...ms) * 1.15).toFixed(3);
   if (+$("#sNet").value !== C.NET_MAKE) { store.set("net3", C.NET_MAKE); $("#sNet").value = C.NET_MAKE; note = ` · 판정 기준 ${C.NET_MAKE.toFixed(2)}로 조정`; }
-  saveShots(); renderScore(); if (s === S.shots[S.shots.length - 1]) renderCard(s); openDetail(s);
+  saveShots(); renderScore(); if (s === S.shots[S.shots.length - 1]) renderCard(s); if (!$("#summary").hidden) showSummary(); openDetail(s);
   toast(`#${s.n} → ${made ? "성공" : "실패"}로 고침${note}`, 3000);
 }
 $("#sModel").value = S.modelType; $("#sNet").value = C.NET_MAKE; $("#hInit").value = S.heightCm; $("#sHeight").value = S.heightCm;
-setVoice(store.get("voice", true)); syncUi();
+setVoice(store.get("voice", true)); setFacing(store.get("facing", "environment")); syncUi();
 // recording (camera + HUD)
 let recr = null, chunks = [];
 $("#mRec").onclick = () => {
